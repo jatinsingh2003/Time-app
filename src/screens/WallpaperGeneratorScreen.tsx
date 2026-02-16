@@ -1,0 +1,222 @@
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Alert, ActivityIndicator, useWindowDimensions } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import ViewShot, { captureRef } from 'react-native-view-shot';
+import * as MediaLibrary from 'expo-media-library';
+import { Ionicons } from '@expo/vector-icons';
+// @ts-ignore
+import WallpaperManager from 'react-native-wallpaper-manager';
+
+import YearGrid from '../components/YearGrid';
+import WeeksGrid from '../components/WeeksGrid';
+import GoalDisplay from '../components/GoalDisplay';
+
+export default function WallpaperGeneratorScreen({ route, navigation }: any) {
+    const { mode, data } = route.params; // mode: 'year' | 'weeks' | 'goal'
+    const viewShotRef = useRef<ViewShot>(null);
+    const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
+    const [processing, setProcessing] = useState(false);
+
+    // We want the capture to be the full screen size
+    const { width, height } = useWindowDimensions();
+
+    const handleSetWallpaper = async (type: 'home' | 'lock' | 'both') => {
+        if (processing) return;
+        setProcessing(true);
+
+        try {
+            // 1. Capture Image
+            const uri = await captureRef(viewShotRef, {
+                format: 'png',
+                quality: 1.0,
+                result: 'tmpfile'
+            });
+
+            if (Platform.OS === 'android') {
+                // 2a. Android: Set Wallpaper
+                WallpaperManager.setWallpaper({ uri, type }, (res: any) => {
+                    setProcessing(false);
+                    Alert.alert('Success', 'Wallpaper updated!');
+                });
+            } else {
+                // 2b. iOS: Save to Photos
+                if (!permissionResponse?.granted) {
+                    const { granted } = await requestPermission();
+                    if (!granted) {
+                        Alert.alert('Permission needed', 'Please allow access to save wallpaper.');
+                        setProcessing(false);
+                        return;
+                    }
+                }
+
+                await MediaLibrary.saveToLibraryAsync(uri);
+                setProcessing(false);
+                Alert.alert(
+                    'Saved to Photos',
+                    'Go to Settings > Wallpaper to set it as your background.'
+                );
+            }
+
+        } catch (error) {
+            console.error(error);
+            setProcessing(false);
+            Alert.alert('Error', 'Failed to generate wallpaper.');
+        }
+    };
+
+    const renderPreview = () => {
+        switch (mode) {
+            case 'year':
+                return <YearGrid progress={data} textColor="#fff" />;
+            case 'weeks':
+                return <WeeksGrid progress={data} textColor="#fff" />;
+            case 'goal':
+                return <GoalDisplay daysLeft={data.daysLeft} textColor="#fff" />;
+            default:
+                return null;
+        }
+    };
+
+    return (
+        <View style={styles.container}>
+            {/* ViewShot Capture Area - Hidden from UI usage but visible for capture */}
+            <ViewShot
+                ref={viewShotRef}
+                style={[styles.captureArea, { width: width, height: height, position: 'absolute', top: 0, left: 0, zIndex: -1 }]}
+                options={{ format: 'png', quality: 1 }}
+            >
+                <View style={styles.contentWrapper}>
+                    {renderPreview()}
+                </View>
+            </ViewShot>
+
+            {/* Visual Preview (Overlay on top of the black background) */}
+            <SafeAreaView style={styles.uiContainer}>
+                <View style={styles.header}>
+                    <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+                        {/* Drag handle look or close icon */}
+                        <Ionicons name="close" size={24} color="#fff" />
+                    </TouchableOpacity>
+                </View>
+
+                {/* Empty space to show preview */}
+                <View style={{ flex: 1 }} />
+
+                {/* Bottom Sheet Controls */}
+                <View style={styles.bottomSheet}>
+                    <View style={styles.dragHandle} />
+                    <Text style={styles.sheetTitle}>Set wallpaper on</Text>
+
+                    {processing ? (
+                        <ActivityIndicator size="large" color="#fff" style={{ marginVertical: 40 }} />
+                    ) : (
+                        <>
+                            <TouchableOpacity style={styles.optionRow} onPress={() => handleSetWallpaper('home')}>
+                                <View style={styles.iconContainer}>
+                                    <Ionicons name="home" size={24} color="#fff" />
+                                </View>
+                                <View style={styles.textContainer}>
+                                    <Text style={styles.optionTitle}>Home screen</Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.optionRow} onPress={() => handleSetWallpaper('lock')}>
+                                <View style={styles.iconContainer}>
+                                    <Ionicons name="lock-closed" size={24} color="#fff" />
+                                </View>
+                                <View style={styles.textContainer}>
+                                    <Text style={styles.optionTitle}>Lock screen</Text>
+                                </View>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity style={styles.optionRow} onPress={() => handleSetWallpaper('both')}>
+                                <View style={styles.iconContainer}>
+                                    <Ionicons name="phone-portrait" size={24} color="#fff" />
+                                </View>
+                                <View style={styles.textContainer}>
+                                    <Text style={styles.optionTitle}>Both screens</Text>
+                                </View>
+                            </TouchableOpacity>
+                        </>
+                    )}
+                </View>
+            </SafeAreaView>
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#000',
+    },
+    uiContainer: {
+        flex: 1,
+        justifyContent: 'space-between',
+    },
+    captureArea: {
+        backgroundColor: '#000',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    contentWrapper: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    header: {
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        alignItems: 'flex-end',
+    },
+    closeButton: {
+        padding: 10,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 20,
+    },
+    bottomSheet: {
+        backgroundColor: '#1C1C1E', // Dark grey like iOS/Android native sheets
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        paddingBottom: 40,
+        paddingTop: 10,
+        paddingHorizontal: 20,
+    },
+    dragHandle: {
+        width: 40,
+        height: 4,
+        backgroundColor: '#555',
+        borderRadius: 2,
+        alignSelf: 'center',
+        marginBottom: 20,
+    },
+    sheetTitle: {
+        color: '#fff',
+        fontSize: 18,
+        fontWeight: '600',
+        marginBottom: 20,
+    },
+    optionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 16,
+    },
+    iconContainer: {
+        width: 40,
+        alignItems: 'center',
+        marginRight: 16,
+    },
+    textContainer: {
+        flex: 1,
+    },
+    optionTitle: {
+        color: '#fff',
+        fontSize: 16,
+        fontWeight: '500',
+    },
+    optionSubtitle: {
+        color: '#888',
+        fontSize: 13,
+        marginTop: 2,
+    },
+});

@@ -1,0 +1,66 @@
+# Antigravity App - Project History & technical Stack
+
+## 1. Project Initialization
+-   **Framework**: React Native via Expo (Managed Workflow, Prebuild enabled).
+-   **Language**: TypeScript.
+-   **Entry Point**: Switched from Expo Router (`app/index.tsx`) to Classic React Native (`index.js` -> `App.tsx`).
+-   **Location**: `d:\intern\TimeApp`.
+
+## 2. Architecture
+-   **Structure**: standard `src/` directory structure.
+    -   `src/screens`: UI Screens.
+    -   `src/components`: Reusable UI elements.
+    -   `src/navigation`: Navigation configuration.
+    -   `src/utils`: Helper functions (Date logic).
+    -   `src/storage`: Persistence logic.
+    -   `src/widgets`: Widget logic and native code.
+-   **Navigation**: `@react-navigation/native` with Bottom Tabs (`@react-navigation/bottom-tabs`).
+
+## 3. Core Engine (`src/utils`, `src/storage`)
+-   **Date Logic**: `dateUtils.ts` handles:
+    -   Day of Year calculation (1-365).
+    -   Days remaining calculation.
+    -   Week progress (1-52).
+    -   Goal target countdown.
+-   **Storage**: `storage.ts` uses `@react-native-async-storage/async-storage` deals with:
+    -   User config (Theme, Mode).
+    -   Goal data (Title, Target Date).
+    -   Strictly offline (no backend).
+
+## 4. UI Implementation (`src/screens`)
+-   **YearDotsScreen**:
+    -   Visualizes the year as a grid of 365 dots.
+    -   **Responsive**: Uses `useWindowDimensions` to calculate column count and dot size dynamically based on screen width (Phone vs Tablet).
+    -   Uses a memoized `Dot` component for performance.
+    -   Shows "Days Left" prominently with scalable typography.
+-   **WeeksViewScreen**:
+    -   Visualizes the year as 52 blocks.
+    -   **Responsive**: Adapts columns (4 for phones, 13 for tablets) and block size dynamically.
+    -   Highlights completed weeks.
+-   **GoalSetupScreen**:
+    -   Simple form to input Goal Title and Date.
+    -   **Responsive**: centered layout with max-width for tablets, scalable text.
+    -   Shows countdown to specific goal.
+-   **Styling**: Minimalist, black/white "Silent/Brutal" design.
+
+## 5. Widget Implementation
+-   **Android**:
+    -   Library: `react-native-android-widget`.
+    -   Implementation: `src/widgets/YearWidget.tsx` (FlexWidget layout).
+    -   Registration: `src/widgets/widgetTaskHandler.tsx` (Background task).
+    -   Configuration: `app.json` plugin config + `npx expo prebuild`.
+-   **iOS**:
+    -   Status: Code prepared in `src/widgets/ios/TimeWidget.swift`.
+    -   Integration: Requires manual Xcode target creation (SwiftUI + WidgetKit).
+
+## 6. Current Implementation Details (Debugging context)
+-   **Web Compatibility**:
+    -   `widgetTaskHandler` is guarded with `Platform.OS !== 'web'` to prevent accessing `AppRegistry.registerHeadlessTask` in the browser.
+-   **Routing**:
+    -   Removed `expo-router` dependency.
+    -   Using `index.js` as main entry.
+    -   `babel.config.js` is standard (no router plugin).
+
+## 7. Next Steps
+-   Run `npx expo run:android` to test native widget.
+-   Open Xcode to add iOS widget target.
