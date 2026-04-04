@@ -4,12 +4,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import * as MediaLibrary from 'expo-media-library';
 import { Ionicons } from '@expo/vector-icons';
-// @ts-ignore
-import WallpaperManager from 'react-native-wallpaper-manager';
+// WallpaperManager is imported dynamically for Android only
+
 
 import YearGrid from '../components/YearGrid';
 import WeeksGrid from '../components/WeeksGrid';
+import LifeGrid from '../components/LifeGrid';
 import GoalDisplay from '../components/GoalDisplay';
+
+
+
 
 export default function WallpaperGeneratorScreen({ route, navigation }: any) {
     const { mode, data } = route.params; // mode: 'year' | 'weeks' | 'goal'
@@ -34,11 +38,14 @@ export default function WallpaperGeneratorScreen({ route, navigation }: any) {
 
             if (Platform.OS === 'android') {
                 // 2a. Android: Set Wallpaper
-                WallpaperManager.setWallpaper({ uri, type }, (res: any) => {
+                const WallpaperManager = require('react-native-wallpaper-manager');
+                const manager = WallpaperManager.default || WallpaperManager;
+
+                manager.setWallpaper({ uri, type }, (res: any) => {
                     setProcessing(false);
                     Alert.alert('Success', 'Wallpaper updated!');
                 });
-            } else {
+            } else if (Platform.OS === 'ios') {
                 // 2b. iOS: Save to Photos
                 if (!permissionResponse?.granted) {
                     const { granted } = await requestPermission();
@@ -55,6 +62,10 @@ export default function WallpaperGeneratorScreen({ route, navigation }: any) {
                     'Saved to Photos',
                     'Go to Settings > Wallpaper to set it as your background.'
                 );
+            } else {
+                // Web: Download image or inform user
+                setProcessing(false);
+                Alert.alert('Not Supported', 'Wallpaper setting is only available on mobile devices. You can save the image from the preview.');
             }
 
         } catch (error) {
@@ -67,15 +78,26 @@ export default function WallpaperGeneratorScreen({ route, navigation }: any) {
     const renderPreview = () => {
         switch (mode) {
             case 'year':
-                return <YearGrid progress={data} textColor="#fff" />;
+                return <YearGrid progress={data} textColor="#fff" showHeader={true} />;
+            case 'life':
+                return <LifeGrid progress={data} textColor="#fff" showHeader={true} />;
             case 'weeks':
                 return <WeeksGrid progress={data} textColor="#fff" />;
             case 'goal':
-                return <GoalDisplay daysLeft={data.daysLeft} textColor="#fff" />;
+                return (
+                    <View style={{ alignItems: 'center' }}>
+                        {data.goalTitle && (
+                            <Text style={styles.goalTitleText}>{data.goalTitle}</Text>
+                        )}
+                        <GoalDisplay daysLeft={data.daysLeft} textColor="#fff" />
+                    </View>
+                );
+
             default:
                 return null;
         }
     };
+
 
     return (
         <View style={styles.container}>
@@ -88,6 +110,7 @@ export default function WallpaperGeneratorScreen({ route, navigation }: any) {
                 <View style={styles.contentWrapper}>
                     {renderPreview()}
                 </View>
+
             </ViewShot>
 
             {/* Visual Preview (Overlay on top of the black background) */}
@@ -219,4 +242,11 @@ const styles = StyleSheet.create({
         fontSize: 13,
         marginTop: 2,
     },
+    goalTitleText: {
+        color: '#fff',
+        fontSize: 20,
+        fontWeight: '700',
+        marginBottom: 10,
+    },
 });
+

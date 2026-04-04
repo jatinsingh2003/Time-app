@@ -5,6 +5,7 @@ import { saveConfig, getConfig, AppConfig } from '../storage/storage';
 import { getGoalProgress } from '../utils/dateUtils';
 import GoalDisplay from '../components/GoalDisplay';
 import { useNavigation } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function GoalSetupScreen() {
     const { width } = useWindowDimensions();
@@ -59,11 +60,16 @@ export default function GoalSetupScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <View style={styles.topHeader}>
+                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.closeButton}>
+                    <Ionicons name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+            </View>
             <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: 'center' }} keyboardShouldPersistTaps="handled">
                 <View style={{ width: Math.min(width, maxContentWidth), paddingHorizontal: horizontalPadding }}>
                     <Text style={styles.header}>TARGET</Text>
 
-                    <GoalDisplay daysLeft={daysLeft} />
+                    <GoalDisplay daysLeft={daysLeft} textColor="#fff" />
 
                     {daysLeft !== null && (
                         <TouchableOpacity
@@ -104,44 +110,56 @@ export default function GoalSetupScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#fff',
+        backgroundColor: '#000',
+    },
+    topHeader: {
+        paddingHorizontal: 20,
+        paddingTop: 10,
+        alignItems: 'flex-end',
+    },
+    closeButton: {
+        padding: 10,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 20,
     },
     header: {
         fontSize: 24,
         fontWeight: '900',
-        marginVertical: 40,
+        marginBottom: 20,
         textTransform: 'uppercase',
         letterSpacing: 2,
         textAlign: 'center',
+        color: '#fff',
     },
     form: {
         width: '100%',
         marginTop: 40,
     },
     input: {
-        borderBottomWidth: 2,
-        borderBottomColor: '#000',
-        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#333',
+        paddingVertical: 12,
         fontSize: 18,
-        marginBottom: 20,
-        color: '#000',
+        marginBottom: 25,
+        color: '#fff',
     },
     button: {
-        backgroundColor: '#000',
-        padding: 15,
+        backgroundColor: '#fff',
+        padding: 18,
         alignItems: 'center',
         marginTop: 20,
-        borderRadius: 4,
+        borderRadius: 30,
     },
     buttonText: {
-        color: '#fff',
+        color: '#000',
         fontWeight: 'bold',
         letterSpacing: 1,
+        fontSize: 15,
     },
     wallpaperButton: {
-        backgroundColor: '#333',
-        paddingVertical: 10,
-        paddingHorizontal: 20,
+        backgroundColor: '#1C1C1E',
+        paddingVertical: 12,
+        paddingHorizontal: 24,
         borderRadius: 30,
         alignSelf: 'center',
         marginBottom: 20,

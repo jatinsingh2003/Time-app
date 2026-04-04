@@ -7,9 +7,11 @@ export interface AppConfig {
     selectedMode: AppMode;
     goalDate?: string;
     goalTitle?: string;
+    birthDate?: string;
     theme: Theme;
     accentColor: string;
 }
+
 
 const STORAGE_KEY = '@antigravity_config';
 

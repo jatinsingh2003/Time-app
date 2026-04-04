@@ -42,7 +42,29 @@ export const getGoalProgress = (targetDateStr: string) => {
     };
 };
 
+export const getLifeProgress = (birthDateStr: string = '1995-01-01') => {
+    const now = new Date();
+    const birthDate = new Date(birthDateStr);
+
+    // Total weeks in 80 years
+    const totalWeeks = 80 * 52;
+
+    // Weeks lived
+    const diffTime = now.getTime() - birthDate.getTime();
+    const weeksLived = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 7));
+
+    return {
+        weeksLived: weeksLived > 0 ? weeksLived : 0,
+        totalWeeks,
+        remainingWeeks: totalWeeks - weeksLived > 0 ? totalWeeks - weeksLived : 0,
+        percentage: (weeksLived / totalWeeks) * 100,
+    };
+};
+
+
+
 export const formatDate = (date: Date) => {
+
     return date.toLocaleDateString(undefined, {
         weekday: 'long',
         year: 'numeric',
