@@ -17,7 +17,7 @@ export default function GoalDisplay({ daysLeft, textColor = '#000' }: GoalDispla
     return (
         <View style={styles.counterContainer}>
             <Text style={[styles.counter, { fontSize: bigNumberSize, lineHeight: bigNumberSize, color: textColor }]}>
-                {daysLeft} <Text style={[styles.counterLabel, { fontSize: labelSize, color: textColor }]}>DAYS TO GO</Text>
+                {daysLeft}{' '}<Text style={[styles.counterLabel, { fontSize: labelSize, color: textColor }]}>DAYS TO GO</Text>
             </Text>
             {/* We could add logic here for passed days if the goal had a start date */}
         </View>

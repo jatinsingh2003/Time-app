@@ -56,7 +56,7 @@ export default function WeeksGrid({ progress, textColor = '#000' }: WeeksGridPro
         <View style={{ width: Math.min(width, maxContentWidth), paddingHorizontal: horizontalPadding }}>
             <View style={styles.header}>
                 <Text style={[styles.title, { color: textColor }]}>52 WEEKS</Text>
-                <Text style={styles.subtitle}>Week {progress.currentWeek} / 52</Text>
+                <Text style={styles.subtitle}>{'Week '}{progress.currentWeek}{' / 52'}</Text>
             </View>
 
             <View style={[styles.grid, { flexDirection: 'row', flexWrap: 'wrap', gap: gap }]}>

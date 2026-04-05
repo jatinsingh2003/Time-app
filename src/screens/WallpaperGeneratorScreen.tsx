@@ -38,15 +38,48 @@ export default function WallpaperGeneratorScreen({ route, navigation }: any) {
 
             if (Platform.OS === 'android') {
                 // 2a. Android: Set Wallpaper
-                const WallpaperManager = require('react-native-wallpaper-manager');
-                const manager = WallpaperManager.default || WallpaperManager;
+                try {
+                    const WallpaperManager = require('react-native-wallpaper-manager');
+                    const manager = WallpaperManager.default || WallpaperManager;
 
-                manager.setWallpaper({ uri, type }, (res: any) => {
+                    // ✅ Null check - will be null in Expo Go
+                    if (!manager || !manager.setWallpaper) {
+                        // Fall back to saving to gallery instead
+                        if (!permissionResponse?.granted) {
+                            const { granted } = await requestPermission();
+                            if (!granted) {
+                                Alert.alert('Permission needed', 'Please allow access to save image.');
+                                setProcessing(false);
+                                return;
+                            }
+                        }
+                        await MediaLibrary.saveToLibraryAsync(uri);
+                        setProcessing(false);
+                        Alert.alert('Saved to Gallery', 'Open your gallery and set it as wallpaper manually.');
+                        return;
+                    }
+
+                    manager.setWallpaper({ uri, type }, (res: any) => {
+                        setProcessing(false);
+                        Alert.alert('Success', 'Wallpaper updated!');
+                    });
+
+                } catch (e) {
+                    // react-native-wallpaper-manager not available (Expo Go)
+                    if (!permissionResponse?.granted) {
+                        const { granted } = await requestPermission();
+                        if (!granted) {
+                            Alert.alert('Permission needed', 'Please allow access to save image.');
+                            setProcessing(false);
+                            return;
+                        }
+                    }
+                    await MediaLibrary.saveToLibraryAsync(uri);
                     setProcessing(false);
-                    Alert.alert('Success', 'Wallpaper updated!');
-                });
+                    Alert.alert('Saved to Gallery', 'Open your gallery and set it as wallpaper manually.');
+                }
+
             } else if (Platform.OS === 'ios') {
-                // 2b. iOS: Save to Photos
                 if (!permissionResponse?.granted) {
                     const { granted } = await requestPermission();
                     if (!granted) {
@@ -55,17 +88,13 @@ export default function WallpaperGeneratorScreen({ route, navigation }: any) {
                         return;
                     }
                 }
-
                 await MediaLibrary.saveToLibraryAsync(uri);
                 setProcessing(false);
-                Alert.alert(
-                    'Saved to Photos',
-                    'Go to Settings > Wallpaper to set it as your background.'
-                );
+                Alert.alert('Saved to Photos', 'Go to Settings > Wallpaper to set it as your background.');
+
             } else {
-                // Web: Download image or inform user
                 setProcessing(false);
-                Alert.alert('Not Supported', 'Wallpaper setting is only available on mobile devices. You can save the image from the preview.');
+                Alert.alert('Not Supported', 'Wallpaper setting is only available on mobile devices.');
             }
 
         } catch (error) {
