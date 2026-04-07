@@ -54,6 +54,10 @@ export default function HomeScreen() {
     const handleSetLiveWallpaper = () => {
         if (Platform.OS === 'android') {
             if (NativeModules.LiveWallpaperModule) {
+                const bDate = config?.birthDate || "1995-01-01";
+                const gDate = config?.goalDate || "";
+                const gTitle = config?.goalTitle || "";
+                NativeModules.LiveWallpaperModule.setConfig(viewMode, bDate, gDate, gTitle);
                 NativeModules.LiveWallpaperModule.openLiveWallpaperPicker();
             } else {
                 Alert.alert('Not Available', 'Live wallpaper native module not found.');
@@ -119,9 +123,12 @@ export default function HomeScreen() {
                     <>
                         {goalDayOfYear !== undefined ? (
                             <View>
-                                {config?.goalTitle && (
-                                    <Text style={styles.goalTitle}>{config.goalTitle}</Text>
-                                )}
+                                <View style={styles.goalTitleRow}>
+                                    <Text style={styles.goalTitle}>{config?.goalTitle || 'Target Goal'}</Text>
+                                    <TouchableOpacity style={styles.editGoalBtn} onPress={() => navigation.navigate('Goal')}>
+                                        <Ionicons name="pencil" size={18} color="#FF9500" />
+                                    </TouchableOpacity>
+                                </View>
                                 <YearGrid progress={yearProgress} showHeader={true} textColor="#fff" goalDayOfYear={goalDayOfYear} />
                             </View>
                         ) : (
@@ -168,13 +175,13 @@ export default function HomeScreen() {
                             </View>
                         </TouchableOpacity>
 
-                        {/* <TouchableOpacity style={styles.sheetOption} onPress={() => { setShowSettings(false); navigation.navigate('Goal'); }}>
+                        <TouchableOpacity style={styles.sheetOption} onPress={() => { setShowSettings(false); navigation.navigate('Goal'); }}>
                             <View style={styles.sheetIconWrapper}><Ionicons name="flag" size={24} color="#fff" /></View>
                             <View>
                                 <Text style={styles.sheetOptionTitle}>Edit Goal</Text>
                                 <Text style={styles.sheetOptionSub}>Change your target date</Text>
                             </View>
-                        </TouchableOpacity> */}
+                        </TouchableOpacity>
 
                         <TouchableOpacity style={styles.sheetOption} onPress={() => { setShowSettings(false); handleEmailSupport(); }}>
                             <View style={styles.sheetIconWrapper}><Ionicons name="mail" size={24} color="#fff" /></View>
@@ -204,7 +211,9 @@ const styles = StyleSheet.create({
 
     // Grid Area
     gridArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    goalTitle: { color: '#fff', fontSize: 24, fontWeight: '800', textAlign: 'center', marginBottom: 20, marginTop: -20 },
+    goalTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20, marginTop: -20 },
+    goalTitle: { color: '#fff', fontSize: 24, fontWeight: '800', marginRight: 12 },
+    editGoalBtn: { padding: 4, backgroundColor: 'rgba(255, 149, 0, 0.1)', borderRadius: 12 },
     
     // Empty Goal State
     emptyGoal: { alignItems: 'center', justifyContent: 'center', padding: 40 },
