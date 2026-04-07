@@ -10,6 +10,7 @@ export interface AppConfig {
     birthDate?: string;
     theme: Theme;
     accentColor: string;
+    hasCompletedOnboarding?: boolean;
 }
 
 

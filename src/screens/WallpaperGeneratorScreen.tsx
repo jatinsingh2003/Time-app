@@ -148,39 +148,32 @@ export default function WallpaperGeneratorScreen({ route, navigation }: any) {
                 {/* Bottom Sheet Controls */}
                 <View style={styles.bottomSheet}>
                     <View style={styles.dragHandle} />
-                    <Text style={styles.sheetTitle}>Set wallpaper on</Text>
+                    <Text style={styles.sheetTitle}>Set Live Wallpaper</Text>
 
                     {processing ? (
                         <ActivityIndicator size="large" color="#fff" style={{ marginVertical: 40 }} />
                     ) : (
-                        <>
-                            <TouchableOpacity style={styles.optionRow} onPress={() => handleSetWallpaper('home')}>
-                                <View style={styles.iconContainer}>
-                                    <Ionicons name="home" size={24} color="#fff" />
-                                </View>
-                                <View style={styles.textContainer}>
-                                    <Text style={styles.optionTitle}>Home screen</Text>
-                                </View>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.optionRow} onPress={() => handleSetWallpaper('lock')}>
-                                <View style={styles.iconContainer}>
-                                    <Ionicons name="lock-closed" size={24} color="#fff" />
-                                </View>
-                                <View style={styles.textContainer}>
-                                    <Text style={styles.optionTitle}>Lock screen</Text>
-                                </View>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity style={styles.optionRow} onPress={() => handleSetWallpaper('both')}>
-                                <View style={styles.iconContainer}>
-                                    <Ionicons name="phone-portrait" size={24} color="#fff" />
-                                </View>
-                                <View style={styles.textContainer}>
-                                    <Text style={styles.optionTitle}>Both screens</Text>
-                                </View>
-                            </TouchableOpacity>
-                        </>
+                        <TouchableOpacity
+                            style={styles.liveWallpaperBtn}
+                            onPress={() => {
+                                Alert.alert(
+                                    'Set Wallpaper',
+                                    'Choose where to apply',
+                                    [
+                                        { text: 'Home Screen', onPress: () => handleSetWallpaper('home') },
+                                        { text: 'Lock Screen', onPress: () => handleSetWallpaper('lock') },
+                                        { text: 'Both', onPress: () => handleSetWallpaper('both') },
+                                        { text: 'Cancel', style: 'cancel' },
+                                    ]
+                                );
+                            }}
+                        >
+                            <Ionicons name="image-outline" size={22} color="#000" style={{ marginRight: 12 }} />
+                            <View>
+                                <Text style={styles.liveWallpaperTitle}>Set Wallpaper</Text>
+                                <Text style={styles.liveWallpaperSubtitle}>Home screen, lock screen, or both</Text>
+                            </View>
+                        </TouchableOpacity>
                     )}
                 </View>
             </SafeAreaView>
@@ -269,6 +262,34 @@ const styles = StyleSheet.create({
         fontSize: 20,
         fontWeight: '700',
         marginBottom: 10,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: 'rgba(255,255,255,0.1)',
+        marginVertical: 10,
+    },
+    liveWallpaperBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: '#FF9500',
+        borderRadius: 16,
+        padding: 18,
+        marginTop: 8,
+        marginBottom: 8,
+    },
+    liveWallpaperTitle: {
+        color: '#000',
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    liveWallpaperSubtitle: {
+        color: 'rgba(0,0,0,0.6)',
+        fontSize: 12,
+        marginTop: 2,
+    },
+    liveWallpaperOption: {
+        marginTop: 10,
+        paddingBottom: 20,
     },
 });
 

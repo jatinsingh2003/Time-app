@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, useWindowDimensions, Platform } from 'react-native';
-import Dot from './Dot';
+import { View, Text, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 
 interface YearGridProps {
     progress: {
@@ -11,43 +10,46 @@ interface YearGridProps {
     textColor?: string;
     showHeader?: boolean;
     style?: any;
+    goalDayOfYear?: number; // shows a red dot at the goal date position
 }
 
-export default function YearGrid({ progress, textColor = '#000', showHeader = true, style }: YearGridProps) {
+export default function YearGrid({ progress, textColor = '#000', showHeader = true, style, goalDayOfYear }: YearGridProps) {
 
     const { width, height } = useWindowDimensions();
 
-    // Responsive Layout Constants
     const MAX_CONTENT_WIDTH = 600;
-    const horizontalPadding = 30; // Increased padding for better look
-    const verticalPadding = 100; // Leave space for headers/footers in the app
+    const horizontalPadding = 30;
+    const verticalPadding = 140; // space for header + footer
 
-    // Constrain the grid width
     const contentWidth = Math.min(width, MAX_CONTENT_WIDTH) - (horizontalPadding * 2);
-    
-    // We want the grid to be more spaced out like the reference
+
     const numColumns = width < 350 ? 12 : 15;
     const numRows = Math.ceil(progress.totalDays / numColumns);
-    
-    // Calculate available height for the grid
+
     const availableHeight = height - verticalPadding;
-    
-    // Calculate itemSize based on both width and height to prevent overflow
+
     const widthItemSize = contentWidth / numColumns;
     const heightItemSize = availableHeight / numRows;
-    
-    const itemSize = Math.min(widthItemSize, heightItemSize);
-    const dotMargin = itemSize * 0.2; // 20% margin for dots to be spaced out
-    const dotSize = itemSize - (dotMargin * 2);
 
+    const itemSize = Math.min(widthItemSize, heightItemSize);
+    const dotMargin = itemSize * 0.2;
+    const dotSize = itemSize - (dotMargin * 2);
 
     const dotsData = useMemo(() => {
         return Array.from({ length: progress.totalDays }, (_, i) => ({
             id: i,
             filled: i < progress.dayOfYear - 1,
             isToday: i === progress.dayOfYear - 1,
+            isGoal: goalDayOfYear !== undefined && i === goalDayOfYear - 1,
         }));
-    }, [progress]);
+    }, [progress, goalDayOfYear]);
+
+    const getDotColor = (item: { filled: boolean; isToday: boolean; isGoal: boolean }) => {
+        if (item.isGoal) return '#FF3B30';   // red — goal date
+        if (item.isToday) return '#FF9500';  // orange — today
+        if (item.filled) return '#FFFFFF';   // white — past
+        return '#333333';                    // dark — future
+    };
 
     const renderItem = (item: any) => (
         <View key={item.id} style={{ width: itemSize, height: itemSize, alignItems: 'center', justifyContent: 'center' }}>
@@ -58,13 +60,14 @@ export default function YearGrid({ progress, textColor = '#000', showHeader = tr
                         width: dotSize,
                         height: dotSize,
                         borderRadius: dotSize / 2,
-                        backgroundColor: item.isToday ? '#FF9500' : (item.filled ? '#FFFFFF' : '#333333')
+                        backgroundColor: getDotColor(item),
                     }
                 ]}
             />
         </View>
     );
 
+    const percentage = Math.round((progress.dayOfYear / progress.totalDays) * 100);
 
     return (
         <View style={[{ width: Math.min(width, MAX_CONTENT_WIDTH), paddingHorizontal: horizontalPadding, alignItems: 'center' }, style]}>
@@ -72,50 +75,37 @@ export default function YearGrid({ progress, textColor = '#000', showHeader = tr
                 {dotsData.map((item) => renderItem(item))}
             </View>
 
-            {showHeader && (
-                <View style={styles.header}>
-                    <Text style={[styles.bigNumber, { fontSize: 16, color: '#FF9500' }]}>
-                        {progress.daysRemaining}d left · {Math.round((progress.dayOfYear / progress.totalDays) * 100)}%
-                    </Text>
-                </View>
-            )}
+            {/* Footer stat */}
+            <View style={styles.footer}>
+                <Text style={styles.footerText}>
+                    {`${progress.daysRemaining}D left · ${percentage}%`}
+                </Text>
+            </View>
         </View>
     );
 }
 
 
-const styles = StyleSheet.create({
-    header: {
-        marginTop: 10,
-        marginBottom: 10,
-        alignItems: 'center',
-    },
-    bigNumber: {
-        fontWeight: '900',
-        letterSpacing: -1,
-        fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
-    },
-    subtitle: {
-        fontWeight: '600',
-        letterSpacing: 2,
-        color: '#666',
-        marginLeft: 4,
-    },
-    passedText: {
-        fontSize: 10,
-        fontWeight: '700',
-        letterSpacing: 1,
-        opacity: 0.5,
-        marginTop: 4,
-    },
-    grid: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingBottom: 20,
-    },
-    dot: {
-        // dynamic background color
+const styles = StyleSheet.create(
+    {
+        grid: {
+            alignItems: 'center',
+            justifyContent: 'center',
+            paddingBottom: 12,
+        },
+        dot: {
+            // dynamic background color
+        },
+        footer: {
+            marginTop: 8,
+            alignItems: 'center',
+        },
+        footerText: {
+            fontSize: 15,
+            fontWeight: '700',
+            color: '#FF9500',
+            letterSpacing: 0.5,
+            fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+        },
     }
-});
-
-
+);

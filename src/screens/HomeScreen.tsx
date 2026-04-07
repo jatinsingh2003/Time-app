@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions, StatusBar, Platform, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions, StatusBar, Platform, Linking, Alert, Modal, NativeModules } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -8,69 +8,42 @@ import YearGrid from '../components/YearGrid';
 import LifeGrid from '../components/LifeGrid';
 import GoalDisplay from '../components/GoalDisplay';
 import { getYearProgress, getWeekProgress, getGoalProgress, getLifeProgress } from '../utils/dateUtils';
-import { getConfig, AppConfig } from '../storage/storage';
+import { getConfig, AppConfig, clearConfig } from '../storage/storage';
 
-interface CalendarCardProps {
-    title: string;
-    description: string;
-    buttonText?: string;
-    onButtonPress: () => void;
-    onCardPress: () => void;
-    icon?: string;
+function getGoalDayOfYear(dateStr: string): number {
+    if (!dateStr) return -1;
+    const goalDate = new Date(dateStr);
+    const start = new Date(goalDate.getFullYear(), 0, 0);
+    const diff = goalDate.getTime() - start.getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
-const CalendarCard = ({ title, description, buttonText = "Set Wallpaper", onButtonPress, onCardPress, icon = "calendar-outline" }: CalendarCardProps) => (
-    <TouchableOpacity style={styles.card} onPress={onCardPress} activeOpacity={0.7}>
-        <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.cardDescription}>{description}</Text>
-        <TouchableOpacity style={styles.cardButton} onPress={onButtonPress}>
-            <Ionicons name={icon as any} size={20} color="#000" style={styles.buttonIcon} />
-            <Text style={styles.buttonText}>{buttonText}</Text>
-        </TouchableOpacity>
-    </TouchableOpacity>
-);
-
 export default function HomeScreen() {
-    const { width } = useWindowDimensions();
+    const { width, height } = useWindowDimensions();
     const navigation = useNavigation<any>();
 
-    const [viewMode, setViewMode] = useState<'year' | 'life' | 'goal'>('year');
+    const [viewMode, setViewMode] = useState<'life' | 'year' | 'goal'>('life');
     const [yearProgress, setYearProgress] = useState(getYearProgress());
-    const [weekProgress, setWeekProgress] = useState(getWeekProgress());
     const [lifeProgress, setLifeProgress] = useState(getLifeProgress());
     const [config, setConfig] = useState<AppConfig | null>(null);
-    const [daysLeftToGoal, setDaysLeftToGoal] = useState<number | null>(null);
+    const [goalDayOfYear, setGoalDayOfYear] = useState<number | undefined>(undefined);
+    const [showSettings, setShowSettings] = useState(false);
 
     const loadData = useCallback(async () => {
         const data = await getConfig();
         setConfig(data);
         if (data && data.goalDate) {
-            const goal = getGoalProgress(data.goalDate);
-            setDaysLeftToGoal(goal.daysRemaining);
+            const gd = getGoalDayOfYear(data.goalDate);
+            if (gd > 0) setGoalDayOfYear(gd);
         } else {
-            setDaysLeftToGoal(null);
+            setGoalDayOfYear(undefined);
         }
         setYearProgress(getYearProgress());
-        setWeekProgress(getWeekProgress());
         setLifeProgress(getLifeProgress(data.birthDate || '1995-01-01'));
+        if (data.selectedMode) {
+             setViewMode(data.selectedMode);
+        }
     }, []);
-
-    const handleEmailSupport = () => {
-        const email = 'croodking465@gmail.com';
-        const subject = 'TimeApp Support';
-        const body = 'Hello, I have a query regarding TimeApp:';
-        const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-
-        Linking.canOpenURL(url)
-            .then((supported) => {
-                if (!supported) {
-                    Alert.alert('Error', 'No email app available on this device.');
-                } else {
-                    return Linking.openURL(url);
-                }
-            })
-            .catch((err) => console.error('An error occurred', err));
-    };
 
     useFocusEffect(
         useCallback(() => {
@@ -78,340 +51,180 @@ export default function HomeScreen() {
         }, [loadData])
     );
 
+    const handleSetLiveWallpaper = () => {
+        if (Platform.OS === 'android') {
+            if (NativeModules.LiveWallpaperModule) {
+                NativeModules.LiveWallpaperModule.openLiveWallpaperPicker();
+            } else {
+                Alert.alert('Not Available', 'Live wallpaper native module not found.');
+            }
+        } else {
+            Alert.alert('Not Supported', 'Live wallpaper is only available on Android.');
+        }
+    };
+
+    const handleEmailSupport = () => {
+        const url = 'mailto:croodking465@gmail.com?subject=TimeApp Support';
+        Linking.openURL(url).catch(() => Alert.alert('Error', 'No email app available.'));
+    };
+
+    // Calculate grid height to take up remaining space
+    const gridContainerHeight = height - 250; // Approximations for Top + Bottom bars
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar barStyle="light-content" backgroundColor="#000" />
 
-            {/* 1. Navbar */}
-            <View style={styles.navbar}>
-                <View style={styles.logoSlot}>
-                    <Ionicons name="hourglass-outline" size={24} color="#fff" />
+            {/* Top Bar with Segmented Control & Settings */}
+            <View style={styles.topBar}>
+                <View style={{ width: 44 }} /> {/* Spacer */}
+                
+                <View style={styles.segmentControl}>
+                    <TouchableOpacity 
+                        style={[styles.segmentBtn, viewMode === 'life' && styles.segmentBtnActive]}
+                        onPress={() => setViewMode('life')}
+                    >
+                        <Text style={[styles.segmentText, viewMode === 'life' && styles.segmentTextActive]}>Life</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.segmentBtn, viewMode === 'year' && styles.segmentBtnActive]}
+                        onPress={() => setViewMode('year')}
+                    >
+                        <Text style={[styles.segmentText, viewMode === 'year' && styles.segmentTextActive]}>Year</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.segmentBtn, viewMode === 'goal' && styles.segmentBtnActive]}
+                        onPress={() => setViewMode('goal')}
+                    >
+                        <Text style={[styles.segmentText, viewMode === 'goal' && styles.segmentTextActive]}>Goal</Text>
+                    </TouchableOpacity>
                 </View>
-                <Text style={styles.appName}>TimeApp</Text>
-                <View style={{ width: 44 }} /> {/* Spacer for balance */}
+
+                <TouchableOpacity style={styles.settingsBtn} onPress={() => setShowSettings(true)}>
+                    <Ionicons name="settings-outline" size={24} color="#fff" />
+                </TouchableOpacity>
             </View>
 
-            <ScrollView contentContainerStyle={styles.scrollContent}>
-                {/* 2. Compact Preview Section */}
-                <View style={styles.previewSection}>
-                    <Text style={styles.previewLabel}>WALLPAPER PREVIEW</Text>
-                    <View style={[
-                        styles.compactPreviewWrapper,
-                        viewMode === 'goal' && { justifyContent: 'flex-end', paddingBottom: 40 }
-                    ]}>
-                        {/* Mockup Status Bar */}
-                        <View style={styles.mockupStatusBar}>
-                            <Text style={styles.mockupStatusText}>00:12</Text>
-                            <View style={styles.mockupIcons}>
-                                <Ionicons name="cellular" size={12} color="#fff" style={{ marginRight: 4 }} />
-                                <Ionicons name="wifi" size={12} color="#fff" style={{ marginRight: 4 }} />
-                                <Ionicons name="battery-full" size={14} color="#fff" />
+            {/* Center Grid Area */}
+            <View style={[styles.gridArea, { height: gridContainerHeight }]}>
+                {viewMode === 'life' && (
+                    <LifeGrid progress={lifeProgress} showHeader={true} textColor="#fff" />
+                )}
+                
+                {viewMode === 'year' && (
+                    <YearGrid progress={yearProgress} showHeader={true} textColor="#fff" />
+                )}
+
+                {viewMode === 'goal' && (
+                    <>
+                        {goalDayOfYear !== undefined ? (
+                            <View>
+                                {config?.goalTitle && (
+                                    <Text style={styles.goalTitle}>{config.goalTitle}</Text>
+                                )}
+                                <YearGrid progress={yearProgress} showHeader={true} textColor="#fff" goalDayOfYear={goalDayOfYear} />
                             </View>
-                        </View>
-
-                        {/* Grid with Overlaid Clock */}
-                        <View style={styles.mockupContentWrapper}>
-                            {viewMode === 'year' && (
-                                <View style={styles.scaleContainer}>
-                                    <YearGrid
-                                        progress={yearProgress}
-                                        showHeader={true}
-                                        textColor="#fff"
-                                    />
-                                </View>
-                            )}
-                            {viewMode === 'life' && (
-                                <View style={styles.scaleContainer}>
-                                    <LifeGrid
-                                        progress={lifeProgress}
-                                        showHeader={true}
-                                        textColor="#fff"
-                                    />
-                                </View>
-                            )}
-
-                            {/* Mockup Clock Overlay */}
-                            <View style={styles.mockupClockOverlay}>
-                                <Text style={styles.mockupClockText}>00:12</Text>
-                                <View style={styles.mockupDateContainer}>
-                                    <Text style={styles.mockupDateText}>19 Feb</Text>
-                                    <Text style={styles.mockupDayText}>Thu</Text>
-                                </View>
+                        ) : (
+                            <View style={styles.emptyGoal}>
+                                <Ionicons name="flag-outline" size={48} color="#666" style={{ marginBottom: 16 }} />
+                                <Text style={styles.emptyGoalTitle}>No Goal Set</Text>
+                                <Text style={styles.emptyGoalSub}>Set a specific date to track your progress towards a target.</Text>
+                                <TouchableOpacity style={styles.setGoalBtn} onPress={() => navigation.navigate('Goal')}>
+                                    <Text style={styles.setGoalBtnText}>SET A GOAL</Text>
+                                </TouchableOpacity>
                             </View>
-                        </View>
-
-                        {viewMode === 'goal' && (
-                            <TouchableOpacity
-                                style={styles.compactGoalWrapper}
-                                onPress={() => navigation.navigate('Goal')}
-                                activeOpacity={0.6}
-                            >
-                                <Text style={styles.compactGoalTitle}>{config?.goalTitle || 'Goal'}</Text>
-                                <GoalDisplay daysLeft={daysLeftToGoal} textColor="#fff" />
-                            </TouchableOpacity>
                         )}
+                    </>
+                )}
+            </View>
+
+            {/* Huge Sticky Footer CTA */}
+            <View style={styles.footerArea}>
+                <TouchableOpacity style={styles.liveWallpaperAction} onPress={handleSetLiveWallpaper}>
+                    <Ionicons name="flash" size={24} color="#000" />
+                    <Text style={styles.liveWallpaperActionText}>SET AS LIVE WALLPAPER</Text>
+                </TouchableOpacity>
+            </View>
+
+
+            {/* Settings Modal (Action Sheet style) */}
+            <Modal visible={showSettings} transparent animationType="fade" onRequestClose={() => setShowSettings(false)}>
+                <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowSettings(false)}>
+                    <View style={styles.settingsSheet}>
+                        <View style={styles.dragHandle} />
+                        <Text style={styles.sheetTitle}>Settings</Text>
+
+                        <TouchableOpacity style={styles.sheetOption} onPress={() => {
+                            setShowSettings(false);
+                            // Clear onboarding flag and config, then reload app to show onboarding
+                            clearConfig().then(() => {
+                                navigation.replace('Onboarding');
+                            });
+                        }}>
+                            <View style={styles.sheetIconWrapper}><Ionicons name="calendar" size={24} color="#fff" /></View>
+                            <View>
+                                <Text style={styles.sheetOptionTitle}>Edit Birthday</Text>
+                                <Text style={styles.sheetOptionSub}>Recalculate your life calendar</Text>
+                            </View>
+                        </TouchableOpacity>
+
+                        {/* <TouchableOpacity style={styles.sheetOption} onPress={() => { setShowSettings(false); navigation.navigate('Goal'); }}>
+                            <View style={styles.sheetIconWrapper}><Ionicons name="flag" size={24} color="#fff" /></View>
+                            <View>
+                                <Text style={styles.sheetOptionTitle}>Edit Goal</Text>
+                                <Text style={styles.sheetOptionSub}>Change your target date</Text>
+                            </View>
+                        </TouchableOpacity> */}
+
+                        <TouchableOpacity style={styles.sheetOption} onPress={() => { setShowSettings(false); handleEmailSupport(); }}>
+                            <View style={styles.sheetIconWrapper}><Ionicons name="mail" size={24} color="#fff" /></View>
+                            <View>
+                                <Text style={styles.sheetOptionTitle}>Contact Support</Text>
+                                <Text style={styles.sheetOptionSub}>Report a bug or suggest a feature</Text>
+                            </View>
+                        </TouchableOpacity>
                     </View>
-                </View>
-
-                {/* 3. Calendar Selection Cards */}
-                <View style={styles.cardsContainer}>
-                    <CalendarCard
-                        title="Life calendar"
-                        description="Each dot is a week in your life."
-                        onCardPress={() => setViewMode('life')}
-                        onButtonPress={() => navigation.navigate('WallpaperGenerator', { mode: 'life', data: lifeProgress })}
-                    />
-
-                    <CalendarCard
-                        title="Daily calendar"
-                        description="Each dot is a day in this year."
-                        onCardPress={() => setViewMode('year')}
-                        onButtonPress={() => navigation.navigate('WallpaperGenerator', { mode: 'year', data: yearProgress })}
-                    />
-
-                    <CalendarCard
-                        title="Goal calendar"
-                        description={daysLeftToGoal !== null ? `Tracking: ${config?.goalTitle || 'your goal'}` : "Set a deadline and track it."}
-                        onCardPress={() => setViewMode('goal')}
-                        buttonText={daysLeftToGoal === null ? "Set Goal" : "Edit / Wallpaper"}
-                        onButtonPress={() => {
-                            navigation.navigate('Goal');
-                        }}
-                    />
-
-                    {/* <CalendarCard
-                        title="About TimeApp"
-                        description="Visualize your most precious resource."
-                        icon="information-circle-outline"
-                        onCardPress={() => { }}
-                        buttonText="Learn More"
-                        onButtonPress={() => { }}
-                    /> */}
-
-                    <CalendarCard
-                        title="Contact Us"
-                        description="Have feedback or need help?"
-                        icon="mail-outline"
-                        onCardPress={handleEmailSupport}
-                        buttonText="Email Support"
-                        onButtonPress={handleEmailSupport}
-                    />
-                </View>
-
-            </ScrollView>
+                </TouchableOpacity>
+            </Modal>
         </SafeAreaView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#000',
-    },
-    scrollContent: {
-        paddingBottom: 40,
-        paddingTop: 10,
-    },
-    navbar: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        paddingHorizontal: 16,
-        height: 60,
-        backgroundColor: '#000',
-    },
-    logoSlot: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        backgroundColor: '#1C1C1E',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    appName: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: '800',
-        letterSpacing: 1,
-    },
-    previewSection: {
-        height: 650,
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 20,
-    },
-    previewLabel: {
-        color: '#666',
-        fontSize: 10,
-        fontWeight: '800',
-        letterSpacing: 2,
-        marginBottom: 10,
-    },
-    compactPreviewWrapper: {
-        width: '94%',
-        height: 600,
-        backgroundColor: '#000',
-        borderRadius: 40,
-        borderWidth: 2,
-        borderColor: '#333',
-        overflow: 'hidden',
-        alignItems: 'center',
-    },
-    mockupStatusBar: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        width: '100%',
-        paddingHorizontal: 25,
-        paddingTop: 12,
-        alignItems: 'center',
-    },
-    mockupStatusText: {
-        color: '#fff',
-        fontSize: 12,
-        fontWeight: '700',
-    },
-    mockupIcons: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    mockupClockContainer: {
-        alignItems: 'center',
-        marginTop: 15,
-        marginBottom: 0,
-    },
-    mockupContentWrapper: {
-        flex: 1,
-        width: '100%',
-        alignItems: 'center',
-        position: 'relative',
-    },
-    mockupClockOverlay: {
-        position: 'absolute',
-        top: 60,
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    mockupClockText: {
-        color: '#fff',
-        fontSize: 72,
-        fontWeight: '300',
-        fontFamily: Platform.OS === 'ios' ? 'System' : 'sans-serif-light',
-    },
-    mockupDateContainer: {
-        marginLeft: 15,
-        paddingLeft: 15,
-        borderLeftWidth: 1,
-        borderLeftColor: 'rgba(255,255,255,0.3)',
-        justifyContent: 'center',
-    },
-    mockupDateText: {
-        color: '#fff',
-        fontSize: 16,
-        fontWeight: '500',
-    },
-    mockupDayText: {
-        color: '#aaa',
-        fontSize: 14,
-        fontWeight: '400',
-    },
-    scaleContainer: {
-        transform: [{ scale: 0.85 }],
-        width: '120%',
-        alignItems: 'center',
-        marginTop: -40, // Pull grid up into the clock area to clear space at bottom
-    },
-    compactGoalWrapper: {
-        alignItems: 'center',
-        transform: [{ scale: 1.0 }],
-    },
-    compactGoalTitle: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: '700',
-        marginBottom: -5,
-    },
-    headerGrid: {
-        maxHeight: 250,
-        overflow: 'hidden',
-    },
-    goalHeaderWrapper: {
-        height: 250,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    goalTitleText: {
-        color: '#fff',
-        fontSize: 20,
-        fontWeight: '700',
-        marginBottom: 5,
-    },
-    editHintText: {
-        color: '#888',
-        fontSize: 12,
-        marginTop: -10,
-        fontWeight: '500',
-    },
-    setGoalPrompt: {
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 30,
-        backgroundColor: '#1C1C1E',
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: '#333',
-        borderStyle: 'dashed',
-    },
-    setGoalText: {
-        color: '#FF9500',
-        fontSize: 18,
-        fontWeight: '600',
-        marginTop: 10,
-    },
-    statsRow: {
-        marginTop: 10,
-    },
-    statsText: {
-        color: '#888',
-        fontSize: 16,
-        fontWeight: '500',
-    },
-    highlight: {
-        color: '#FF9500', // Orange-ish as seen in the screenshot partially
-    },
-    cardsContainer: {
-        paddingHorizontal: 16,
-        gap: 16,
-    },
-    card: {
-        backgroundColor: '#1C1C1E',
-        borderRadius: 16,
-        padding: 20,
-    },
-    cardTitle: {
-        color: '#fff',
-        fontSize: 18,
-        fontWeight: '600',
-        marginBottom: 8,
-    },
-    cardDescription: {
-        color: '#AAAAAA',
-        fontSize: 15,
-        marginBottom: 20,
-    },
-    cardButton: {
-        backgroundColor: '#FFFFFF',
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 12,
-        borderRadius: 25,
-    },
-    buttonIcon: {
-        marginRight: 8,
-    },
-    buttonText: {
-        color: '#000',
-        fontWeight: '700',
-        fontSize: 15,
-    }
+    container: { flex: 1, backgroundColor: '#000' },
+    topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 60 },
+    settingsBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+    
+    // Segmented Control
+    segmentControl: { flexDirection: 'row', backgroundColor: '#1C1C1E', borderRadius: 20, padding: 4 },
+    segmentBtn: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: 16 },
+    segmentBtnActive: { backgroundColor: '#333' },
+    segmentText: { color: '#666', fontSize: 14, fontWeight: '700' },
+    segmentTextActive: { color: '#fff' },
+
+    // Grid Area
+    gridArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    goalTitle: { color: '#fff', fontSize: 24, fontWeight: '800', textAlign: 'center', marginBottom: 20, marginTop: -20 },
+    
+    // Empty Goal State
+    emptyGoal: { alignItems: 'center', justifyContent: 'center', padding: 40 },
+    emptyGoalTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
+    emptyGoalSub: { color: '#888', fontSize: 16, textAlign: 'center', marginBottom: 30, lineHeight: 24 },
+    setGoalBtn: { backgroundColor: '#FF9500', paddingVertical: 16, paddingHorizontal: 32, borderRadius: 30 },
+    setGoalBtnText: { color: '#000', fontWeight: 'bold', fontSize: 16, letterSpacing: 1 },
+
+    // Footer
+    footerArea: { paddingHorizontal: 24, paddingBottom: Platform.OS === 'ios' ? 10 : 30, paddingTop: 10 },
+    liveWallpaperAction: { flexDirection: 'row', backgroundColor: '#FF9500', alignItems: 'center', justifyContent: 'center', paddingVertical: 20, borderRadius: 24, shadowColor: '#FF9500', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 15, elevation: 10 },
+    liveWallpaperActionText: { color: '#000', fontWeight: '900', fontSize: 16, letterSpacing: 1.5, marginLeft: 12 },
+
+    // Modal / Sheet
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+    settingsSheet: { backgroundColor: '#1C1C1E', borderTopLeftRadius: 30, borderTopRightRadius: 30, paddingHorizontal: 24, paddingBottom: 50, paddingTop: 16 },
+    dragHandle: { width: 40, height: 5, backgroundColor: '#333', borderRadius: 3, alignSelf: 'center', marginBottom: 20 },
+    sheetTitle: { color: '#fff', fontSize: 22, fontWeight: '800', marginBottom: 24 },
+    sheetOption: { flexDirection: 'row', alignItems: 'center', marginBottom: 24 },
+    sheetIconWrapper: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#333', alignItems: 'center', justifyContent: 'center', marginRight: 16 },
+    sheetOptionTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
+    sheetOptionSub: { color: '#888', fontSize: 14, marginTop: 4 },
 });
