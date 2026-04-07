@@ -26,17 +26,27 @@ const WeekBlock = ({ completed, isCurrent, size }: WeekBlockProps) => (
 );
 
 export default function WeeksGrid({ progress, textColor = '#000' }: WeeksGridProps) {
-    const { width } = useWindowDimensions();
+    const { width, height } = useWindowDimensions();
 
     const isTablet = width > 600;
-    const horizontalPadding = 20;
+    const horizontalPadding = 30;
     const maxContentWidth = 600;
+    const verticalPadding = 150;
+
     const contentWidth = Math.min(width, maxContentWidth) - (horizontalPadding * 2);
 
     // 52 weeks layout logic
     const numColumns = isTablet ? 13 : 4;
-    const gap = 10;
-    const blockSize = (contentWidth - ((numColumns - 1) * gap)) / numColumns;
+    const numRows = Math.ceil(52 / numColumns);
+    
+    const availableHeight = height - verticalPadding;
+
+    const widthItemSize = contentWidth / numColumns;
+    const heightItemSize = availableHeight / numRows;
+
+    const itemSize = Math.min(widthItemSize, heightItemSize);
+    const dotMargin = itemSize * 0.15;
+    const dotSize = itemSize - (dotMargin * 2);
 
     const weeksData = useMemo(() => {
         return Array.from({ length: 52 }, (_, i) => ({
@@ -47,24 +57,35 @@ export default function WeeksGrid({ progress, textColor = '#000' }: WeeksGridPro
     }, [progress]);
 
     const renderItem = (item: any) => (
-        <View key={item.id} style={{ marginBottom: gap }}>
-            <WeekBlock completed={item.completed} isCurrent={item.isCurrent} size={blockSize} />
+        <View key={item.id} style={{ width: itemSize, height: itemSize, alignItems: 'center', justifyContent: 'center' }}>
+            <View
+                style={[
+                    styles.dot,
+                    {
+                        width: dotSize,
+                        height: dotSize,
+                        borderRadius: dotSize / 2,
+                        backgroundColor: item.isCurrent ? '#FF9500' : (item.completed ? '#FFFFFF' : '#333333')
+                    }
+                ]}
+            />
         </View>
     );
 
     return (
-        <View style={{ width: Math.min(width, maxContentWidth), paddingHorizontal: horizontalPadding }}>
+        <View style={{ width: Math.min(width, maxContentWidth), paddingHorizontal: horizontalPadding, alignItems: 'center' }}>
             <View style={styles.header}>
                 <Text style={[styles.title, { color: textColor }]}>52 WEEKS</Text>
                 <Text style={styles.subtitle}>{'Week '}{progress.currentWeek}{' / 52'}</Text>
             </View>
 
-            <View style={[styles.grid, { flexDirection: 'row', flexWrap: 'wrap', gap: gap }]}>
+            <View style={[styles.grid, { width: contentWidth, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }]}>
                 {weeksData.map((item) => renderItem(item))}
             </View>
         </View>
     );
 }
+
 
 const styles = StyleSheet.create({
     header: {
@@ -87,10 +108,14 @@ const styles = StyleSheet.create({
         paddingBottom: 20,
         justifyContent: 'flex-start', // Align items to start
     },
+    dot: {
+        // dynamic styles
+    },
     block: {
         backgroundColor: '#eee',
         borderRadius: 4,
     },
+
     completed: {
         backgroundColor: '#000',
     },

@@ -13,18 +13,26 @@ interface LifeGridProps {
 }
 
 export default function LifeGrid({ progress, textColor = '#000', showHeader = true, style }: LifeGridProps) {
-    const { width } = useWindowDimensions();
+    const { width, height } = useWindowDimensions();
 
     const MAX_CONTENT_WIDTH = 600;
-    const horizontalPadding = 20;
+    const horizontalPadding = 30;
+    const verticalPadding = 120; // More padding for life grid as it's very dense
+
     const contentWidth = Math.min(width, MAX_CONTENT_WIDTH) - (horizontalPadding * 2);
 
-    // 52 columns to represent weeks in a year horizontally, making dots much smaller
+    // 52 columns for weeks
     const numColumns = 52;
-    const dotMargin = 0.5;
+    const numRows = Math.ceil(progress.totalWeeks / numColumns);
+    
+    const availableHeight = height - verticalPadding;
 
-    const itemSize = contentWidth / numColumns;
-    const dotSize = Math.floor(itemSize - dotMargin * 2);
+    const widthItemSize = contentWidth / numColumns;
+    const heightItemSize = availableHeight / numRows;
+
+    const itemSize = Math.min(widthItemSize, heightItemSize);
+    const dotMargin = itemSize * 0.1; // Minimal margin to keep them visible but spaced
+    const dotSize = itemSize - (dotMargin * 2);
 
     const dotsData = useMemo(() => {
         return Array.from({ length: progress.totalWeeks }, (_, i) => ({
@@ -43,25 +51,22 @@ export default function LifeGrid({ progress, textColor = '#000', showHeader = tr
                         width: dotSize,
                         height: dotSize,
                         borderRadius: dotSize / 2,
-                        backgroundColor: item.isThisWeek ? (textColor === '#fff' ? '#fff' : '#000') : (item.filled ? (textColor === '#fff' ? '#555' : '#ccc') : (textColor === '#fff' ? '#222' : '#eee'))
+                        backgroundColor: item.isThisWeek ? '#FF9500' : (item.filled ? '#FFFFFF' : '#333333')
                     }
                 ]}
             />
         </View>
     );
 
-    const bigNumberSize = Math.min(width * 0.1, 50);
-    const subtitleSize = 10;
-
     return (
         <View style={[{ width: Math.min(width, MAX_CONTENT_WIDTH), paddingHorizontal: horizontalPadding, alignItems: 'center' }, style]}>
-            <View style={[styles.grid, { flexDirection: 'row', flexWrap: 'wrap' }]}>
+            <View style={[styles.grid, { width: contentWidth, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }]}>
                 {dotsData.map(renderDot)}
             </View>
 
             {showHeader && (
                 <View style={styles.header}>
-                    <Text style={[styles.bigNumber, { fontSize: 16, color: '#FFA500' }]}>
+                    <Text style={[styles.bigNumber, { fontSize: 16, color: '#FF9500' }]}>
                         {progress.remainingWeeks}w left · {Math.round((progress.weeksLived / progress.totalWeeks) * 100)}%
                     </Text>
                 </View>
@@ -69,6 +74,7 @@ export default function LifeGrid({ progress, textColor = '#000', showHeader = tr
         </View>
     );
 }
+
 
 const styles = StyleSheet.create({
     header: {

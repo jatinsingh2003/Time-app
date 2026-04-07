@@ -37,35 +37,21 @@ export default function WallpaperGeneratorScreen({ route, navigation }: any) {
             });
 
             if (Platform.OS === 'android') {
-                // 2a. Android: Set Wallpaper
-                try {
-                    const WallpaperManager = require('react-native-wallpaper-manager');
-                    const manager = WallpaperManager.default || WallpaperManager;
+                const { NativeModules } = require('react-native');
+                const manager = NativeModules.WallpaperManager;
 
-                    // ✅ Null check - will be null in Expo Go
-                    if (!manager || !manager.setWallpaper) {
-                        // Fall back to saving to gallery instead
-                        if (!permissionResponse?.granted) {
-                            const { granted } = await requestPermission();
-                            if (!granted) {
-                                Alert.alert('Permission needed', 'Please allow access to save image.');
-                                setProcessing(false);
-                                return;
-                            }
+                if (manager && manager.setWallpaper) {
+                    // ✅ Use our custom native module
+                    manager.setWallpaper({ uri, type }, (err: any) => {
+                        setProcessing(false);
+                        if (err) {
+                            Alert.alert('Error', String(err));
+                        } else {
+                            Alert.alert('Success', '🎉 Wallpaper set!');
                         }
-                        await MediaLibrary.saveToLibraryAsync(uri);
-                        setProcessing(false);
-                        Alert.alert('Saved to Gallery', 'Open your gallery and set it as wallpaper manually.');
-                        return;
-                    }
-
-                    manager.setWallpaper({ uri, type }, (res: any) => {
-                        setProcessing(false);
-                        Alert.alert('Success', 'Wallpaper updated!');
                     });
-
-                } catch (e) {
-                    // react-native-wallpaper-manager not available (Expo Go)
+                } else {
+                    // Fallback - save to gallery
                     if (!permissionResponse?.granted) {
                         const { granted } = await requestPermission();
                         if (!granted) {
@@ -103,7 +89,6 @@ export default function WallpaperGeneratorScreen({ route, navigation }: any) {
             Alert.alert('Error', 'Failed to generate wallpaper.');
         }
     };
-
     const renderPreview = () => {
         switch (mode) {
             case 'year':
@@ -133,13 +118,19 @@ export default function WallpaperGeneratorScreen({ route, navigation }: any) {
             {/* ViewShot Capture Area - Hidden from UI usage but visible for capture */}
             <ViewShot
                 ref={viewShotRef}
-                style={[styles.captureArea, { width: width, height: height, position: 'absolute', top: 0, left: 0, zIndex: -1 }]}
+                style={[styles.captureArea, {
+                    width: width,
+                    height: height,
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    zIndex: -1
+                }]}
                 options={{ format: 'png', quality: 1 }}
             >
                 <View style={styles.contentWrapper}>
                     {renderPreview()}
                 </View>
-
             </ViewShot>
 
             {/* Visual Preview (Overlay on top of the black background) */}
@@ -210,9 +201,11 @@ const styles = StyleSheet.create({
         backgroundColor: '#000',
         alignItems: 'center',
         justifyContent: 'center',
+        flex: 1,
     },
     contentWrapper: {
         flex: 1,
+        width: '100%',
         alignItems: 'center',
         justifyContent: 'center',
     },
