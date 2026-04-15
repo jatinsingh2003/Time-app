@@ -25,6 +25,12 @@ function toDateStr(year: number, month: number, day: number): string {
     const dd = String(day).padStart(2, '0');
     return `${year}-${mm}-${dd}`;
 }
+function getGoalDayOfYear(dateStr: string): number {
+    const goalDate = new Date(dateStr);
+    const start = new Date(goalDate.getFullYear(), 0, 0);
+    const diff = goalDate.getTime() - start.getTime();
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
+}
 function formatSelectedDate(dateStr: string): string {
     if (!dateStr) return '';
     const [year, month, day] = dateStr.split('-');
@@ -142,7 +148,12 @@ export default function GoalSetupScreen() {
                         <TouchableOpacity
                             style={styles.wallpaperButton}
                             onPress={() => navigation.navigate('WallpaperGenerator', {
-                                mode: 'goal', data: { daysLeft, goalTitle: title }
+                                mode: 'goal',
+                                data: {
+                                    goalTitle: title,
+                                    daysLeft,
+                                    goalDayOfYear: getGoalDayOfYear(selectedDate),
+                                },
                             })}
                         >
                             <Text style={styles.buttonText}>SET AS WALLPAPER</Text>

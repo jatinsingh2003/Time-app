@@ -1,0 +1,70 @@
+TIME APP: GOAL WALLPAPER FLOW DOCUMENTATION
+==========================================
+
+This document explains the technical flow of the "Goal" section and its connection to the wallpaper functionality in the Time App.
+
+1. ARCHITECTURAL OVERVIEW
+-------------------------
+The Goal Wallpaper flow spans across user input (Goal Setup), persistence (Storage), visual representation (Components), and system integration (Wallpaper Generation/Live Wallpaper service).
+
+2. STEP-BY-STEP FLOW
+--------------------
+
+Step 1: Goal Information Entry
+- File: src/screens/GoalSetupScreen.tsx
+- Description: The user enters a title (e.g., "Product Launch") and selects a target date using a custom Calendar Modal built into the screen.
+- Logic:
+    - Text entry for title.
+    - Calendar selection for date via a modal UI.
+    - "SET GOAL" button saves the data and calculates the countdown.
+
+Step 2: Data Persistence & Calculation
+- Files: src/storage/storage.ts, src/utils/dateUtils.ts
+- Description: 
+    - When "SET GOAL" is tapped, `saveConfig` in `storage.ts` saves the `goalTitle` and `goalDate` to AsyncStorage.
+    - `getGoalProgress` in `dateUtils.ts` calculates the number of `daysRemaining` by comparing the target date to the current date.
+
+Step 3: Preview & Triggering Wallpaper Creation
+- File: src/screens/GoalSetupScreen.tsx (Wallpaper Trigger)
+- Description: Once a goal is set, a "SET AS WALLPAPER" button appears.
+- Action: Tapping this navigates the user to the `WallpaperGenerator` route, passing the goal data (mode: 'goal', title, and daysLeft).
+
+Step 4: Wallpaper Generation (Static Image Path)
+- File: src/screens/WallpaperGeneratorScreen.tsx
+- Component: src/components/GoalDisplay.tsx
+- Description: 
+    - The generator screen renders a preview using the `GoalDisplay` component, which shows the "X DAYS TO GO" text.
+    - It uses `react-native-view-shot` to wrap the preview area.
+    - Logic:
+        - `captureRef` captures the current view as a high-quality PNG image.
+        - On Android: Calls the custom `NativeModules.WallpaperManager.setWallpaper` native module to apply the image directly.
+        - On iOS: Saves the image to the Media Library for the user to set manually.
+
+Step 5: Home Screen Integration & Live Wallpaper Path
+- File: src/screens/HomeScreen.tsx
+- Description: 
+    - The Home Screen also has a "Goal" mode which displays a specialized `YearGrid` where the goal date is highlighted.
+    - User can tap "SET AS LIVE WALLPAPER" in the footer.
+    - Action: Calls `NativeModules.LiveWallpaperModule.setConfig` and `openLiveWallpaperPicker()`. This path uses a native background service to render the goal visualization continuously.
+
+3. LIST OF RELATED FILES (IN FLOW ORDER)
+----------------------------------------
+
+FRONTEND (JS/TSX):
+1. src/screens/GoalSetupScreen.tsx       (Entry screen, Form handling, Route trigger)
+2. src/storage/storage.ts                (Saves Goal Title and Date to AsyncStorage)
+3. src/utils/dateUtils.ts                (Logic to calculate days remaining until target)
+4. src/components/GoalDisplay.tsx        (Visual component showing numeric countdown)
+5. src/components/YearGrid.tsx           (Visual component showing goal date within the 365-day grid)
+6. src/screens/HomeScreen.tsx            (Integration point for goal display and Live Wallpaper trigger)
+7. src/screens/WallpaperGeneratorScreen.tsx (Captures preview and applies static wallpaper)
+8. src/navigation/AppNavigator.tsx       (Controls the routing between screens)
+
+NATIVE ANDROID FILES:
+9. android/app/src/main/java/com/wallpaper/WallpaperModule.java               (Bridge for static wallpaper capture)
+10. android/app/src/main/java/com/anonymous/TimeApp/LiveWallpaperModule.java  (Bridge for Live Wallpaper configuration)
+11. android/app/src/main/java/com/anonymous/TimeApp/DotsLiveWallpaper.java     (The actual background service that renders dots)
+12. android/app/src/main/java/com/wallpaper/WallpaperPackage.java            (Registers the static wallpaper module)
+13. android/app/src/main/java/com/anonymous/TimeApp/LiveWallpaperPackage.java (Registers the Live Wallpaper module)
+
+Note: On iOS, the flow concludes with saving to the Photos app via `expo-media-library` as iOS does not allow programmatic home screen wallpaper setting.
