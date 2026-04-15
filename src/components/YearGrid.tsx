@@ -149,7 +149,7 @@ export default function YearGrid({
 
     const contentWidth = Math.min(width, MAX_CONTENT_WIDTH) - horizontalPadding * 2;
 
-    // ── In goal mode we only render dots 1 … goalDayOfYear ──────────────────
+    // ── In goal mode show only dots from today → goalDayOfYear ─────────────
     const totalDots = goalMode && goalDayOfYear ? goalDayOfYear - progress.dayOfYear + 1 : progress.totalDays;
 
     const numColumns = width < 350 ? 12 : 15;
@@ -165,14 +165,12 @@ export default function YearGrid({
     // ── Build dot descriptors ────────────────────────────────────────────────
     const dotsData = useMemo(() => {
         return Array.from({ length: totalDots }, (_, i) => {
-            const dayNum = goalMode && goalDayOfYear ? progress.dayOfYear + i : i + 1; // 1-based day of year
             if (goalMode && goalDayOfYear) {
-                // i < dayOfYear - 1  → past (white)
-                // i === dayOfYear - 1 → today (orange)
-                // i === goalDayOfYear - 1 → goal (red)
-                // else → remaining (grey)
-                const isToday = dayNum === progress.dayOfYear;
-                const isGoal = dayNum === goalDayOfYear;
+                // i === 0                → today (orange)
+                // i === totalDots - 1   → goal day (red)
+                // else                  → remaining days (grey)
+                const isToday = i === 0;
+                const isGoal  = i === totalDots - 1;
                 const isFuture = !isToday && !isGoal;
                 return { id: i, isPast: false, isToday, isGoal, isFuture };
             } else {
@@ -206,8 +204,9 @@ export default function YearGrid({
         : progress.daysRemaining;
 
     const percentage = goalMode && goalDayOfYear
-        ? Math.round(((progress.dayOfYear - 1) / goalDayOfYear) * 100)
+        ? Math.round((progress.dayOfYear / goalDayOfYear) * 100)
         : Math.round((progress.dayOfYear / progress.totalDays) * 100);
+    // percentage = how far through the year we are toward the goal date
 
     return (
         <View
@@ -227,8 +226,7 @@ export default function YearGrid({
                         width: contentWidth, 
                         flexDirection: 'row', 
                         flexWrap: 'wrap', 
-                        justifyContent: 'flex-start',
-                        marginLeft: (contentWidth % (itemSize * numColumns)) / 2
+                        justifyContent: 'center',
                     },
                 ]}
             >

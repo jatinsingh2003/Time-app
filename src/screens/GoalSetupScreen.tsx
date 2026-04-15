@@ -85,6 +85,16 @@ export default function GoalSetupScreen() {
         const progress = getGoalProgress(selectedDate);
         setDaysLeft(progress.daysRemaining);
         Keyboard.dismiss();
+
+        // Auto-navigate to the goal preview page
+        navigation.navigate('WallpaperGenerator', {
+            mode: 'goal',
+            data: {
+                goalTitle: title,
+                daysLeft: progress.daysRemaining,
+                goalDayOfYear: getGoalDayOfYear(selectedDate),
+            },
+        });
     };
 
     const prevMonth = () => {

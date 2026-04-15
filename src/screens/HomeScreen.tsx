@@ -82,7 +82,7 @@
 //             {/* Top Bar with Segmented Control & Settings */}
 //             <View style={styles.topBar}>
 //                 <View style={{ width: 44 }} /> {/* Spacer */}
-                
+
 //                 <View style={styles.segmentControl}>
 //                     <TouchableOpacity 
 //                         style={[styles.segmentBtn, viewMode === 'life' && styles.segmentBtnActive]}
@@ -114,7 +114,7 @@
 //                 {viewMode === 'life' && (
 //                     <LifeGrid progress={lifeProgress} showHeader={true} textColor="#fff" />
 //                 )}
-                
+
 //                 {viewMode === 'year' && (
 //                     <YearGrid progress={yearProgress} showHeader={true} textColor="#fff" />
 //                 )}
@@ -201,7 +201,7 @@
 //     container: { flex: 1, backgroundColor: '#000' },
 //     topBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, height: 60 },
 //     settingsBtn: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-    
+
 //     // Segmented Control
 //     segmentControl: { flexDirection: 'row', backgroundColor: '#1C1C1E', borderRadius: 20, padding: 4 },
 //     segmentBtn: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: 16 },
@@ -214,7 +214,7 @@
 //     goalTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 20, marginTop: -20 },
 //     goalTitle: { color: '#fff', fontSize: 24, fontWeight: '800', marginRight: 12 },
 //     editGoalBtn: { padding: 4, backgroundColor: 'rgba(255, 149, 0, 0.1)', borderRadius: 12 },
-    
+
 //     // Empty Goal State
 //     emptyGoal: { alignItems: 'center', justifyContent: 'center', padding: 40 },
 //     emptyGoalTitle: { color: '#fff', fontSize: 22, fontWeight: 'bold', marginBottom: 8 },
@@ -240,7 +240,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, useWindowDimensions,
-    StatusBar, Platform, Linking, Alert, Modal, NativeModules,
+    StatusBar, Platform, Linking, Alert, Modal, NativeModules, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -310,7 +310,7 @@ export default function HomeScreen() {
     };
 
     const handleEmailSupport = () => {
-        const url = 'mailto:croodking465@gmail.com?subject=TimeApp Support';
+        const url = 'mailto:admin@spritzstudio.in?subject=TimeApp Support';
         Linking.openURL(url).catch(() => Alert.alert('Error', 'No email app available.'));
     };
 
@@ -322,7 +322,7 @@ export default function HomeScreen() {
 
             {/* Top Bar */}
             <View style={styles.topBar}>
-                <View style={{ width: 44 }} />
+                <Image source={require('../../assets/images/logo.png')} style={{ width: 65, height: 65, resizeMode: 'contain' }} />
                 <View style={styles.segmentControl}>
                     {(['life', 'year', 'goal'] as const).map((mode) => (
                         <TouchableOpacity

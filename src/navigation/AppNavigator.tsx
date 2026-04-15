@@ -6,6 +6,7 @@ import { View, ActivityIndicator } from 'react-native';
 import HomeScreen from '../screens/HomeScreen';
 import GoalSetupScreen from '../screens/GoalSetupScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import WallpaperGeneratorScreen from '../screens/WallpaperGeneratorScreen';
 import { getConfig } from '../storage/storage';
 
 const Stack = createNativeStackNavigator();
@@ -37,6 +38,7 @@ export default function AppNavigator() {
                 <Stack.Screen name="Onboarding" component={OnboardingScreen} />
                 <Stack.Screen name="Home" component={HomeScreen} />
                 <Stack.Screen name="Goal" component={GoalSetupScreen} />
+                <Stack.Screen name="WallpaperGenerator" component={WallpaperGeneratorScreen} />
             </Stack.Navigator>
         </NavigationContainer>
     );
