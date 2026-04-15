@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "TimeApp",
-    "slug": "TimeApp",
+    "name": "DotChrono",
+    "slug": "DotChrono",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "timeapp",
+    "scheme": "dotchrono",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
