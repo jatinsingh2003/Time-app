@@ -1,0 +1,4 @@
+D:/intern/TimeApp/android/app/.cxx/Debug/121nd5sf/armeabi-v7a/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/foo.dir
+D:/intern/TimeApp/android/app/.cxx/Debug/121nd5sf/armeabi-v7a/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/boo.dir
+D:/intern/TimeApp/android/app/.cxx/Debug/121nd5sf/armeabi-v7a/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/edit_cache.dir
+D:/intern/TimeApp/android/app/.cxx/Debug/121nd5sf/armeabi-v7a/CMakeFiles/_CMakeLTOTest-CXX/bin/CMakeFiles/rebuild_cache.dir

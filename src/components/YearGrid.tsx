@@ -1,4 +1,4 @@
-// import React, { useMemo } from 'react';
+﻿// import React, { useMemo } from 'react';
 // import { View, Text, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 
 // interface YearGridProps {
@@ -10,105 +10,151 @@
 //     textColor?: string;
 //     showHeader?: boolean;
 //     style?: any;
-//     goalDayOfYear?: number; // shows a red dot at the goal date position
+//     goalDayOfYear?: number;
+//     goalMode?: boolean;
+//     wallpaperMatch?: boolean;
 // }
 
-// export default function YearGrid({ progress, textColor = '#000', showHeader = true, style, goalDayOfYear }: YearGridProps) {
-
-//     const { width, height } = useWindowDimensions();
+// export default function YearGrid({
+//     progress,
+//     textColor = '#000',
+//     showHeader = true,
+//     style,
+//     goalDayOfYear,
+//     goalMode = false,
+//     wallpaperMatch = false,
+// }: YearGridProps) {
+//     const { width, height, scale } = useWindowDimensions();
 
 //     const MAX_CONTENT_WIDTH = 600;
 //     const horizontalPadding = 30;
-//     const verticalPadding = 140; // space for header + footer
+//     const verticalPadding = 140;
 
-//     const contentWidth = Math.min(width, MAX_CONTENT_WIDTH) - (horizontalPadding * 2);
+//     const contentWidth = wallpaperMatch
+//         ? width
+//         : Math.min(width, MAX_CONTENT_WIDTH) - horizontalPadding * 2;
+//     const totalDots = goalMode && goalDayOfYear ? goalDayOfYear - progress.dayOfYear + 1 : progress.totalDays;
+//     const numColumns = wallpaperMatch ? 15 : width < 350 ? 12 : 15;
+//     const numRows = Math.ceil(totalDots / numColumns);
 
-//     const numColumns = width < 350 ? 12 : 15;
-//     const numRows = Math.ceil(progress.totalDays / numColumns);
-
-//     const availableHeight = height - verticalPadding;
-
+//     const dpToPx = (dp: number) => Math.round(dp * scale);
+//     const wallpaperFooterSpace = goalMode ? dpToPx(120) : dpToPx(80);
+//     const availableHeight = wallpaperMatch ? height - wallpaperFooterSpace : height - verticalPadding;
 //     const widthItemSize = contentWidth / numColumns;
 //     const heightItemSize = availableHeight / numRows;
-
 //     const itemSize = Math.min(widthItemSize, heightItemSize);
-//     const dotMargin = itemSize * 0.2;
-//     const dotSize = itemSize - (dotMargin * 2);
+//     const dotSize = wallpaperMatch ? itemSize * 0.6 : itemSize * 0.6;
 
 //     const dotsData = useMemo(() => {
-//         return Array.from({ length: progress.totalDays }, (_, i) => ({
-//             id: i,
-//             filled: i < progress.dayOfYear - 1,
-//             isToday: i === progress.dayOfYear - 1,
-//             isGoal: goalDayOfYear !== undefined && i === goalDayOfYear - 1,
-//         }));
-//     }, [progress, goalDayOfYear]);
+//         return Array.from({ length: totalDots }, (_, i) => {
+//             const dayNum = goalMode && goalDayOfYear ? progress.dayOfYear + i : i + 1;
 
-//     const getDotColor = (item: { filled: boolean; isToday: boolean; isGoal: boolean }) => {
-//         if (item.isGoal) return '#FF3B30';   // red — goal date
-//         if (item.isToday) return '#FF9500';  // orange — today
-//         if (item.filled) return '#FFFFFF';   // white — past
-//         return '#333333';                    // dark — future
+//             if (goalMode && goalDayOfYear) {
+//                 const isToday = dayNum === progress.dayOfYear;
+//                 const isGoal = dayNum === goalDayOfYear;
+//                 const isFuture = !isToday && !isGoal;
+
+//                 return { id: i, isPast: false, isToday, isGoal, isFuture };
+//             }
+
+//             return {
+//                 id: i,
+//                 isPast: i < progress.dayOfYear - 1,
+//                 isToday: i === progress.dayOfYear - 1,
+//                 isGoal: goalDayOfYear !== undefined && i === goalDayOfYear - 1,
+//                 isFuture: false,
+//             };
+//         });
+//     }, [totalDots, progress.dayOfYear, goalDayOfYear, goalMode]);
+
+//     const getDotColor = (item: {
+//         isPast: boolean;
+//         isToday: boolean;
+//         isGoal: boolean;
+//         isFuture: boolean;
+//     }) => {
+//         if (item.isGoal) return '#FF3B30';
+//         if (item.isToday) return '#FF9500';
+//         if (item.isPast) return '#FFFFFF';
+//         return '#333333';
 //     };
 
-//     const renderItem = (item: any) => (
-//         <View key={item.id} style={{ width: itemSize, height: itemSize, alignItems: 'center', justifyContent: 'center' }}>
-//             <View
-//                 style={[
-//                     styles.dot,
-//                     {
-//                         width: dotSize,
-//                         height: dotSize,
-//                         borderRadius: dotSize / 2,
-//                         backgroundColor: getDotColor(item),
-//                     }
-//                 ]}
-//             />
-//         </View>
-//     );
+//     const daysToGoal = goalMode && goalDayOfYear
+//         ? goalDayOfYear - progress.dayOfYear
+//         : progress.daysRemaining;
 
-//     const percentage = Math.round((progress.dayOfYear / progress.totalDays) * 100);
+//     const percentage = goalMode && goalDayOfYear
+//         ? Math.round(((progress.dayOfYear - 1) / goalDayOfYear) * 100)
+//         : Math.round((progress.dayOfYear / progress.totalDays) * 100);
 
 //     return (
-//         <View style={[{ width: Math.min(width, MAX_CONTENT_WIDTH), paddingHorizontal: horizontalPadding, alignItems: 'center' }, style]}>
-//             <View style={[styles.grid, { width: contentWidth, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center' }]}>
-//                 {dotsData.map((item) => renderItem(item))}
+//         <View
+//             style={[
+//                 {
+//                     width: wallpaperMatch ? width : Math.min(width, MAX_CONTENT_WIDTH),
+//                     paddingHorizontal: wallpaperMatch ? 0 : horizontalPadding,
+//                     alignItems: 'center',
+//                 },
+//                 style,
+//             ]}
+//         >
+//             <View
+//                 style={[
+//                     styles.grid,
+//                     {
+//                         width: contentWidth,
+//                         flexDirection: 'row',
+//                         flexWrap: 'wrap',
+//                         justifyContent: wallpaperMatch ? 'flex-start' : 'center',
+//                     },
+//                 ]}
+//             >
+//                 {dotsData.map((item) => (
+//                     <View
+//                         key={item.id}
+//                         style={{ width: itemSize, height: itemSize, alignItems: 'center', justifyContent: 'center' }}
+//                     >
+//                         <View
+//                             style={{
+//                                 width: dotSize,
+//                                 height: dotSize,
+//                                 borderRadius: dotSize / 2,
+//                                 backgroundColor: getDotColor(item),
+//                             }}
+//                         />
+//                     </View>
+//                 ))}
 //             </View>
 
-//             {/* Footer stat */}
 //             <View style={styles.footer}>
 //                 <Text style={styles.footerText}>
-//                     {`${progress.daysRemaining}D left · ${percentage}%`}
+//                     {goalMode
+//                         ? `${daysToGoal}D left · ${percentage}%`
+//                         : `${progress.daysRemaining}D left · ${percentage}%`}
 //                 </Text>
 //             </View>
 //         </View>
 //     );
 // }
 
-
-// const styles = StyleSheet.create(
-//     {
-//         grid: {
-//             alignItems: 'center',
-//             justifyContent: 'center',
-//             paddingBottom: 12,
-//         },
-//         dot: {
-//             // dynamic background color
-//         },
-//         footer: {
-//             marginTop: 8,
-//             alignItems: 'center',
-//         },
-//         footerText: {
-//             fontSize: 15,
-//             fontWeight: '700',
-//             color: '#FF9500',
-//             letterSpacing: 0.5,
-//             fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
-//         },
-//     }
-// );
+// const styles = StyleSheet.create({
+//     grid: {
+//         alignItems: 'center',
+//         justifyContent: 'center',
+//         paddingBottom: 12,
+//     },
+//     footer: {
+//         marginTop: 8,
+//         alignItems: 'center',
+//     },
+//     footerText: {
+//         fontSize: 15,
+//         fontWeight: '700',
+//         color: '#FF9500',
+//         letterSpacing: 0.5,
+//         fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+//     },
+// });
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, useWindowDimensions, Platform } from 'react-native';
 
@@ -122,15 +168,9 @@ interface YearGridProps {
     showHeader?: boolean;
     style?: any;
     goalDayOfYear?: number;
-    /**
-     * When true, the grid shows ONLY the dots from Day 1 → goalDayOfYear.
-     * Dot colours:
-     *   - Before today  → white  (days already passed)
-     *   - Today         → orange
-     *   - After today   → grey   (days remaining)
-     *   - Goal day      → red
-     */
+    goalStartDayOfYear?: number; // day the goal was originally set
     goalMode?: boolean;
+    wallpaperMatch?: boolean;
 }
 
 export default function YearGrid({
@@ -139,52 +179,62 @@ export default function YearGrid({
     showHeader = true,
     style,
     goalDayOfYear,
+    goalStartDayOfYear,
     goalMode = false,
+    wallpaperMatch = false,
 }: YearGridProps) {
-    const { width, height } = useWindowDimensions();
+    const { width, height, scale } = useWindowDimensions();
 
     const MAX_CONTENT_WIDTH = 600;
     const horizontalPadding = 30;
     const verticalPadding = 140;
 
-    const contentWidth = Math.min(width, MAX_CONTENT_WIDTH) - horizontalPadding * 2;
+    const contentWidth = wallpaperMatch
+        ? width
+        : Math.min(width, MAX_CONTENT_WIDTH) - horizontalPadding * 2;
 
-    // ── In goal mode show only dots from today → goalDayOfYear ─────────────
-    const totalDots = goalMode && goalDayOfYear ? goalDayOfYear - progress.dayOfYear + 1 : progress.totalDays;
+    // In goal mode: dots go from goalStartDayOfYear → goalDayOfYear
+    // If no start day saved, fall back to dayOfYear (today) so at minimum today→goal shows
+    const goalStart = (goalMode && goalStartDayOfYear) ? goalStartDayOfYear : progress.dayOfYear;
 
-    const numColumns = width < 350 ? 12 : 15;
+    const totalDots = goalMode && goalDayOfYear
+        ? goalDayOfYear - goalStart + 1
+        : progress.totalDays;
+
+    const numColumns = wallpaperMatch ? 15 : width < 350 ? 12 : 15;
     const numRows = Math.ceil(totalDots / numColumns);
 
-    const availableHeight = height - verticalPadding;
+    const dpToPx = (dp: number) => Math.round(dp * scale);
+    const wallpaperFooterSpace = goalMode ? dpToPx(120) : dpToPx(80);
+    const availableHeight = wallpaperMatch ? height - wallpaperFooterSpace : height - verticalPadding;
     const widthItemSize = contentWidth / numColumns;
     const heightItemSize = availableHeight / numRows;
     const itemSize = Math.min(widthItemSize, heightItemSize);
-    const dotMargin = itemSize * 0.2;
-    const dotSize = itemSize - dotMargin * 2;
+    const dotSize = itemSize * 0.6;
 
-    // ── Build dot descriptors ────────────────────────────────────────────────
     const dotsData = useMemo(() => {
         return Array.from({ length: totalDots }, (_, i) => {
             if (goalMode && goalDayOfYear) {
-                // i === 0                → today (orange)
-                // i === totalDots - 1   → goal day (red)
-                // else                  → remaining days (grey)
-                const isToday = i === 0;
-                const isGoal  = i === totalDots - 1;
-                const isFuture = !isToday && !isGoal;
-                return { id: i, isPast: false, isToday, isGoal, isFuture };
-            } else {
-                // Original year-mode colouring
-                return {
-                    id: i,
-                    isPast: i < progress.dayOfYear - 1,
-                    isToday: i === progress.dayOfYear - 1,
-                    isGoal: goalDayOfYear !== undefined && i === goalDayOfYear - 1,
-                    isFuture: false,
-                };
+                // dayNum goes from goalStart → goalDayOfYear
+                const dayNum = goalStart + i;
+                const isGoal = dayNum === goalDayOfYear;
+                const isToday = dayNum === progress.dayOfYear;
+                const isPast = dayNum < progress.dayOfYear && !isGoal;
+                const isFuture = !isPast && !isToday && !isGoal;
+
+                return { id: i, isPast, isToday, isGoal, isFuture };
             }
+
+            // Normal year mode
+            return {
+                id: i,
+                isPast: i < progress.dayOfYear - 1,
+                isToday: i === progress.dayOfYear - 1,
+                isGoal: goalDayOfYear !== undefined && i === goalDayOfYear - 1,
+                isFuture: false,
+            };
         });
-    }, [totalDots, progress.dayOfYear, goalDayOfYear, goalMode]);
+    }, [totalDots, goalStart, progress.dayOfYear, goalDayOfYear, goalMode]);
 
     const getDotColor = (item: {
         isPast: boolean;
@@ -192,28 +242,26 @@ export default function YearGrid({
         isGoal: boolean;
         isFuture: boolean;
     }) => {
-        if (item.isGoal) return '#FF3B30'; // red   — goal day
-        if (item.isToday) return '#FF9500'; // orange — today
-        if (item.isPast) return '#FFFFFF'; // white  — already passed
-        return '#333333';                    // grey   — future / remaining
+        if (item.isGoal) return '#FF3B30'; // red
+        if (item.isToday) return '#FF9500'; // orange
+        if (item.isPast) return '#FFFFFF'; // white
+        return '#333333';                    // grey (future)
     };
 
-    // ── Footer text ──────────────────────────────────────────────────────────
     const daysToGoal = goalMode && goalDayOfYear
         ? goalDayOfYear - progress.dayOfYear
         : progress.daysRemaining;
 
     const percentage = goalMode && goalDayOfYear
-        ? Math.round((progress.dayOfYear / goalDayOfYear) * 100)
+        ? Math.round(((progress.dayOfYear - goalStart) / (goalDayOfYear - goalStart)) * 100)
         : Math.round((progress.dayOfYear / progress.totalDays) * 100);
-    // percentage = how far through the year we are toward the goal date
 
     return (
         <View
             style={[
                 {
-                    width: Math.min(width, MAX_CONTENT_WIDTH),
-                    paddingHorizontal: horizontalPadding,
+                    width: wallpaperMatch ? width : Math.min(width, MAX_CONTENT_WIDTH),
+                    paddingHorizontal: wallpaperMatch ? 0 : horizontalPadding,
                     alignItems: 'center',
                 },
                 style,
@@ -222,11 +270,11 @@ export default function YearGrid({
             <View
                 style={[
                     styles.grid,
-                    { 
-                        width: contentWidth, 
-                        flexDirection: 'row', 
-                        flexWrap: 'wrap', 
-                        justifyContent: 'center',
+                    {
+                        width: contentWidth,
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        justifyContent: wallpaperMatch ? 'flex-start' : 'center',
                     },
                 ]}
             >

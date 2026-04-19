@@ -9,6 +9,12 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Android
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+
 # Native
 .kotlin/
 *.orig.*
@@ -38,6 +44,4 @@ yarn-error.*
 
 app-example
 
-# generated native folders
-/ios
-/android
+
