@@ -1,3 +1,4 @@
+
 // import React, { useState, useEffect, useCallback } from 'react';
 // import {
 //     View, Text, StyleSheet, TouchableOpacity, useWindowDimensions,
@@ -30,6 +31,7 @@
 //     const [lifeProgress, setLifeProgress] = useState(getLifeProgress());
 //     const [config, setConfig] = useState<AppConfig | null>(null);
 //     const [goalDayOfYear, setGoalDayOfYear] = useState<number | undefined>(undefined);
+//     const [goalStartDayOfYear, setGoalStartDayOfYear] = useState<number | undefined>(undefined);
 //     const [showSettings, setShowSettings] = useState(false);
 
 //     const loadData = useCallback(async () => {
@@ -38,8 +40,11 @@
 //         if (data && data.goalDate) {
 //             const gd = getGoalDayOfYear(data.goalDate);
 //             if (gd > 0) setGoalDayOfYear(gd);
+//             // Load the day the goal was originally set
+//             if (data.goalStartDay) setGoalStartDayOfYear(data.goalStartDay);
 //         } else {
 //             setGoalDayOfYear(undefined);
+//             setGoalStartDayOfYear(undefined);
 //         }
 //         setYearProgress(getYearProgress());
 //         setLifeProgress(getLifeProgress(data.birthDate || '1995-01-01'));
@@ -60,7 +65,8 @@
 //                 const bDate = config?.birthDate || '1995-01-01';
 //                 const gDate = config?.goalDate || '';
 //                 const gTitle = config?.goalTitle || '';
-//                 NativeModules.LiveWallpaperModule.setConfig(viewMode, bDate, gDate, gTitle);
+//                 const gStartDay = config?.goalStartDay ?? 0;
+//                 NativeModules.LiveWallpaperModule.setConfig(viewMode, bDate, gDate, gTitle, gStartDay);
 //                 NativeModules.LiveWallpaperModule.openLiveWallpaperPicker();
 //             } else {
 //                 Alert.alert('Not Available', 'Live wallpaper native module not found.');
@@ -116,7 +122,6 @@
 //                     <>
 //                         {goalDayOfYear !== undefined ? (
 //                             <View style={{ alignItems: 'center' }}>
-//                                 {/* Goal title + edit */}
 //                                 <View style={styles.goalTitleRow}>
 //                                     <Text style={styles.goalTitle}>{config?.goalTitle || 'Target Goal'}</Text>
 //                                     <TouchableOpacity
@@ -128,19 +133,17 @@
 //                                 </View>
 
 //                                 {/*
-//                                   ✅ KEY CHANGE:
-//                                   goalMode={true}  → grid shows only Day 1 → goalDayOfYear dots
-//                                   Dot colours:
-//                                     past   = white
-//                                     today  = orange
-//                                     future = grey
-//                                     goal   = red
+//                                   goalMode=true   → shows goalStart → goalDayOfYear dots
+//                                   goalStartDayOfYear → the day the goal was set (persisted)
+//                                   As days pass: past dots turn white, today = orange,
+//                                   future = grey, goal day = red
 //                                 */}
 //                                 <YearGrid
 //                                     progress={yearProgress}
-//                                     showHeader={false}
+//                                     showHeader={true}
 //                                     textColor="#fff"
 //                                     goalDayOfYear={goalDayOfYear}
+//                                     goalStartDayOfYear={goalStartDayOfYear}
 //                                     goalMode={true}
 //                                 />
 //                             </View>
@@ -288,10 +291,11 @@
 //     sheetOptionTitle: { color: '#fff', fontSize: 18, fontWeight: '600' },
 //     sheetOptionSub: { color: '#888', fontSize: 14, marginTop: 4 },
 // });
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
     View, Text, StyleSheet, TouchableOpacity, useWindowDimensions,
     StatusBar, Platform, Linking, Alert, Modal, NativeModules, Image,
+    FlatList, ViewToken,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -299,9 +303,11 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 
 import YearGrid from '../components/YearGrid';
 import LifeGrid from '../components/LifeGrid';
-import GoalDisplay from '../components/GoalDisplay';
-import { getYearProgress, getWeekProgress, getGoalProgress, getLifeProgress } from '../utils/dateUtils';
+import { getYearProgress, getLifeProgress } from '../utils/dateUtils';
 import { getConfig, AppConfig, clearConfig } from '../storage/storage';
+
+const MODES = ['life', 'year', 'goal'] as const;
+type Mode = typeof MODES[number];
 
 function getGoalDayOfYear(dateStr: string): number {
     if (!dateStr) return -1;
@@ -314,8 +320,9 @@ function getGoalDayOfYear(dateStr: string): number {
 export default function HomeScreen() {
     const { width, height } = useWindowDimensions();
     const navigation = useNavigation<any>();
+    const flatListRef = useRef<FlatList>(null);
 
-    const [viewMode, setViewMode] = useState<'life' | 'year' | 'goal'>('life');
+    const [viewMode, setViewMode] = useState<Mode>('life');
     const [yearProgress, setYearProgress] = useState(getYearProgress());
     const [lifeProgress, setLifeProgress] = useState(getLifeProgress());
     const [config, setConfig] = useState<AppConfig | null>(null);
@@ -326,10 +333,9 @@ export default function HomeScreen() {
     const loadData = useCallback(async () => {
         const data = await getConfig();
         setConfig(data);
-        if (data && data.goalDate) {
+        if (data?.goalDate) {
             const gd = getGoalDayOfYear(data.goalDate);
             if (gd > 0) setGoalDayOfYear(gd);
-            // Load the day the goal was originally set
             if (data.goalStartDay) setGoalStartDayOfYear(data.goalStartDay);
         } else {
             setGoalDayOfYear(undefined);
@@ -338,15 +344,32 @@ export default function HomeScreen() {
         setYearProgress(getYearProgress());
         setLifeProgress(getLifeProgress(data.birthDate || '1995-01-01'));
         if (data.selectedMode) {
-            setViewMode(data.selectedMode);
+            const idx = MODES.indexOf(data.selectedMode as Mode);
+            if (idx >= 0) {
+                setViewMode(data.selectedMode as Mode);
+                flatListRef.current?.scrollToIndex({ index: idx, animated: false });
+            }
         }
     }, []);
 
-    useFocusEffect(
-        useCallback(() => {
-            loadData();
-        }, [loadData])
-    );
+    useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
+
+    // Sync segment control when user swipes
+    const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+        if (viewableItems.length > 0) {
+            const idx = viewableItems[0].index ?? 0;
+            setViewMode(MODES[idx]);
+        }
+    }).current;
+
+    const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
+
+    // Tap segment → scroll FlatList
+    const handleSegmentPress = (mode: Mode) => {
+        const idx = MODES.indexOf(mode);
+        setViewMode(mode);
+        flatListRef.current?.scrollToIndex({ index: idx, animated: true });
+    };
 
     const handleSetLiveWallpaper = () => {
         if (Platform.OS === 'android') {
@@ -366,11 +389,63 @@ export default function HomeScreen() {
     };
 
     const handleEmailSupport = () => {
-        const url = 'mailto:admin@spritzstudio.in?subject=TimeApp Support';
-        Linking.openURL(url).catch(() => Alert.alert('Error', 'No email app available.'));
+        Linking.openURL('mailto:admin@spritzstudio.in?subject=TimeApp Support')
+            .catch(() => Alert.alert('Error', 'No email app available.'));
     };
 
     const gridContainerHeight = height - 250;
+
+    const renderSlide = ({ item }: { item: Mode }) => (
+        <View style={{ width, height: gridContainerHeight, alignItems: 'center', justifyContent: 'center' }}>
+            {item === 'life' && (
+                <LifeGrid progress={lifeProgress} showHeader={true} textColor="#fff" />
+            )}
+
+            {item === 'year' && (
+                <YearGrid progress={yearProgress} showHeader={true} textColor="#fff" />
+            )}
+
+            {item === 'goal' && (
+                <>
+                    {goalDayOfYear !== undefined ? (
+                        <View style={{ alignItems: 'center' }}>
+                            <View style={styles.goalTitleRow}>
+                                <Text style={styles.goalTitle}>{config?.goalTitle || 'Target Goal'}</Text>
+                                <TouchableOpacity
+                                    style={styles.editGoalBtn}
+                                    onPress={() => navigation.navigate('Goal')}
+                                >
+                                    <Ionicons name="pencil" size={18} color="#FF9500" />
+                                </TouchableOpacity>
+                            </View>
+                            <YearGrid
+                                progress={yearProgress}
+                                showHeader={true}
+                                textColor="#fff"
+                                goalDayOfYear={goalDayOfYear}
+                                goalStartDayOfYear={goalStartDayOfYear}
+                                goalMode={true}
+                            />
+                        </View>
+                    ) : (
+                        <View style={styles.emptyGoal}>
+                            <Ionicons name="flag-outline" size={48} color="#666" style={{ marginBottom: 16 }} />
+                            <Text style={styles.emptyGoalTitle}>No Goal Set</Text>
+                            <Text style={styles.emptyGoalSub}>
+                                Set a specific date to track your progress towards a target.
+                            </Text>
+                            <TouchableOpacity
+                                style={styles.setGoalBtn}
+                                onPress={() => navigation.navigate('Goal')}
+                            >
+                                <Text style={styles.setGoalBtnText}>SET A GOAL</Text>
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </>
+            )}
+        </View>
+    );
 
     return (
         <SafeAreaView style={styles.container}>
@@ -378,13 +453,16 @@ export default function HomeScreen() {
 
             {/* Top Bar */}
             <View style={styles.topBar}>
-                <Image source={require('../../assets/images/logo.png')} style={{ width: 65, height: 65, resizeMode: 'contain' }} />
+                <Image
+                    source={require('../../assets/images/logo.png')}
+                    style={{ width: 65, height: 65, resizeMode: 'contain' }}
+                />
                 <View style={styles.segmentControl}>
-                    {(['life', 'year', 'goal'] as const).map((mode) => (
+                    {MODES.map((mode) => (
                         <TouchableOpacity
                             key={mode}
                             style={[styles.segmentBtn, viewMode === mode && styles.segmentBtnActive]}
-                            onPress={() => setViewMode(mode)}
+                            onPress={() => handleSegmentPress(mode)}
                         >
                             <Text style={[styles.segmentText, viewMode === mode && styles.segmentTextActive]}>
                                 {mode.charAt(0).toUpperCase() + mode.slice(1)}
@@ -397,62 +475,29 @@ export default function HomeScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/* Center Grid Area */}
-            <View style={[styles.gridArea, { height: gridContainerHeight }]}>
-                {viewMode === 'life' && (
-                    <LifeGrid progress={lifeProgress} showHeader={true} textColor="#fff" />
-                )}
+            {/* Swipeable Grid Area */}
+            <FlatList
+                ref={flatListRef}
+                data={MODES}
+                keyExtractor={(item) => item}
+                renderItem={renderSlide}
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                onViewableItemsChanged={onViewableItemsChanged}
+                viewabilityConfig={viewabilityConfig}
+                getItemLayout={(_, index) => ({ length: width, offset: width * index, index })}
+                style={{ height: gridContainerHeight }}
+            />
 
-                {viewMode === 'year' && (
-                    <YearGrid progress={yearProgress} showHeader={true} textColor="#fff" />
-                )}
-
-                {viewMode === 'goal' && (
-                    <>
-                        {goalDayOfYear !== undefined ? (
-                            <View style={{ alignItems: 'center' }}>
-                                <View style={styles.goalTitleRow}>
-                                    <Text style={styles.goalTitle}>{config?.goalTitle || 'Target Goal'}</Text>
-                                    <TouchableOpacity
-                                        style={styles.editGoalBtn}
-                                        onPress={() => navigation.navigate('Goal')}
-                                    >
-                                        <Ionicons name="pencil" size={18} color="#FF9500" />
-                                    </TouchableOpacity>
-                                </View>
-
-                                {/*
-                                  goalMode=true   → shows goalStart → goalDayOfYear dots
-                                  goalStartDayOfYear → the day the goal was set (persisted)
-                                  As days pass: past dots turn white, today = orange,
-                                  future = grey, goal day = red
-                                */}
-                                <YearGrid
-                                    progress={yearProgress}
-                                    showHeader={true}
-                                    textColor="#fff"
-                                    goalDayOfYear={goalDayOfYear}
-                                    goalStartDayOfYear={goalStartDayOfYear}
-                                    goalMode={true}
-                                />
-                            </View>
-                        ) : (
-                            <View style={styles.emptyGoal}>
-                                <Ionicons name="flag-outline" size={48} color="#666" style={{ marginBottom: 16 }} />
-                                <Text style={styles.emptyGoalTitle}>No Goal Set</Text>
-                                <Text style={styles.emptyGoalSub}>
-                                    Set a specific date to track your progress towards a target.
-                                </Text>
-                                <TouchableOpacity
-                                    style={styles.setGoalBtn}
-                                    onPress={() => navigation.navigate('Goal')}
-                                >
-                                    <Text style={styles.setGoalBtnText}>SET A GOAL</Text>
-                                </TouchableOpacity>
-                            </View>
-                        )}
-                    </>
-                )}
+            {/* Dot indicators */}
+            <View style={styles.dotRow}>
+                {MODES.map((mode) => (
+                    <View
+                        key={mode}
+                        style={[styles.dotIndicator, viewMode === mode && styles.dotIndicatorActive]}
+                    />
+                ))}
             </View>
 
             {/* Footer CTA */}
@@ -539,7 +584,9 @@ const styles = StyleSheet.create({
     segmentBtnActive: { backgroundColor: '#333' },
     segmentText: { color: '#666', fontSize: 14, fontWeight: '700' },
     segmentTextActive: { color: '#fff' },
-    gridArea: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    dotRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', paddingVertical: 8, gap: 6 },
+    dotIndicator: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#333' },
+    dotIndicatorActive: { backgroundColor: '#FF9500', width: 18 },
     goalTitleRow: {
         flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
         marginBottom: 20, marginTop: -20,

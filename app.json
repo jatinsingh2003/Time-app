@@ -4,7 +4,7 @@
     "slug": "DotChrono",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo.png",
     "scheme": "dotchrono",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -12,11 +12,10 @@
       "supportsTablet": true
     },
     "android": {
+      "icon": "./assets/images/logo.png",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "foregroundImage": "./assets/images/logo.png",
+        "backgroundColor": "#000000"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
