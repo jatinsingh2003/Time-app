@@ -1,4 +1,4 @@
-package com.anonymous.TimeApp;
+package com.spritzstudio.dotchrono;
 
 import com.facebook.react.ReactPackage;
 import com.facebook.react.bridge.NativeModule;

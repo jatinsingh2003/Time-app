@@ -1,4 +1,4 @@
-package com.anonymous.TimeApp;
+package com.spritzstudio.dotchrono;
 
 import android.app.WallpaperManager;
 import android.graphics.Bitmap;

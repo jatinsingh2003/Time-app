@@ -1,4 +1,4 @@
-package com.anonymous.TimeApp
+package com.spritzstudio.dotchrono
 
 import android.app.Application
 import android.content.res.Configuration

@@ -1,4 +1,4 @@
-package com.anonymous.TimeApp.widget;
+package com.spritzstudio.dotchrono.widget;
 
 import com.reactnativeandroidwidget.RNWidgetProvider;
 

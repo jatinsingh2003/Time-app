@@ -1,26 +1,26 @@
 import { registerWidgetTaskHandler } from 'react-native-android-widget';
+import { Platform } from 'react-native';
+
+import { getConfig } from '../storage/storage';
 import { YearWidget } from './YearWidget';
-import { getYearProgress } from '../utils/dateUtils';
+import { buildWidgetPayload } from './sharedWidgetModel';
 
 export async function widgetTaskHandler(props: any) {
-    const widgetInfo = props.widgetInfo;
-
-    const { daysRemaining, totalDays } = getYearProgress();
+    const config = await getConfig();
+    const payload = buildWidgetPayload(config);
 
     switch (props.widgetAction) {
         case 'WIDGET_ADDED':
         case 'WIDGET_UPDATE':
         case 'WIDGET_RESIZED':
             props.renderWidget(
-                <YearWidget daysRemaining={daysRemaining} totalDays={totalDays} />
+                <YearWidget model={payload.model} />
             );
             break;
         default:
             break;
     }
 }
-
-import { Platform } from 'react-native';
 
 if (Platform.OS !== 'web') {
     registerWidgetTaskHandler(widgetTaskHandler);

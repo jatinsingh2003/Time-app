@@ -294,7 +294,7 @@
 //         }
 //     }
 // }
-package com.anonymous.TimeApp;
+package com.spritzstudio.dotchrono;
 
 import android.content.SharedPreferences;
 import android.graphics.Canvas;

@@ -304,7 +304,8 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import YearGrid from '../components/YearGrid';
 import LifeGrid from '../components/LifeGrid';
 import { getYearProgress, getLifeProgress } from '../utils/dateUtils';
-import { getConfig, AppConfig, clearConfig } from '../storage/storage';
+import { getConfig, AppConfig, clearConfig, saveConfig } from '../storage/storage';
+import { openIOSWidgetInstructions, syncWidgets } from '../widgets/widgetSync';
 
 const MODES = ['life', 'year', 'goal'] as const;
 type Mode = typeof MODES[number];
@@ -354,13 +355,28 @@ export default function HomeScreen() {
 
     useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
+    const persistSelectedMode = useCallback(async (mode: Mode) => {
+        const baseConfig = config ?? await getConfig();
+        const nextConfig: AppConfig = {
+            ...baseConfig,
+            selectedMode: mode,
+        };
+
+        setConfig(nextConfig);
+        await saveConfig(nextConfig);
+    }, [config]);
+
     // Sync segment control when user swipes
-    const onViewableItemsChanged = useRef(({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    const onViewableItemsChanged = useCallback(({ viewableItems }: { viewableItems: ViewToken[] }) => {
         if (viewableItems.length > 0) {
             const idx = viewableItems[0].index ?? 0;
-            setViewMode(MODES[idx]);
+            const nextMode = MODES[idx];
+            setViewMode(nextMode);
+            if (nextMode !== viewMode) {
+                persistSelectedMode(nextMode);
+            }
         }
-    }).current;
+    }, [persistSelectedMode, viewMode]);
 
     const viewabilityConfig = useRef({ viewAreaCoveragePercentThreshold: 50 }).current;
 
@@ -369,9 +385,10 @@ export default function HomeScreen() {
         const idx = MODES.indexOf(mode);
         setViewMode(mode);
         flatListRef.current?.scrollToIndex({ index: idx, animated: true });
+        persistSelectedMode(mode);
     };
 
-    const handleSetLiveWallpaper = () => {
+    const handlePrimaryAction = async () => {
         if (Platform.OS === 'android') {
             if (NativeModules.LiveWallpaperModule) {
                 const bDate = config?.birthDate || '1995-01-01';
@@ -384,7 +401,16 @@ export default function HomeScreen() {
                 Alert.alert('Not Available', 'Live wallpaper native module not found.');
             }
         } else {
-            Alert.alert('Not Supported', 'Live wallpaper is only available on Android.');
+            const currentConfig = config ?? await getConfig();
+            await syncWidgets(currentConfig);
+
+            const openedInstructions = await openIOSWidgetInstructions();
+            if (!openedInstructions) {
+                Alert.alert(
+                    'iPhone Widget Sync Ready',
+                    'Your Year/Goal widget data has been synced. Once the native iOS widget extension is connected in Xcode, this action will refresh the home-screen widget immediately.'
+                );
+            }
         }
     };
 
@@ -502,9 +528,11 @@ export default function HomeScreen() {
 
             {/* Footer CTA */}
             <View style={styles.footerArea}>
-                <TouchableOpacity style={styles.liveWallpaperAction} onPress={handleSetLiveWallpaper}>
-                    <Ionicons name="flash" size={24} color="#000" />
-                    <Text style={styles.liveWallpaperActionText}>SET AS LIVE WALLPAPER</Text>
+                <TouchableOpacity style={styles.liveWallpaperAction} onPress={handlePrimaryAction}>
+                    <Ionicons name={Platform.OS === 'ios' ? 'grid-outline' : 'flash'} size={24} color="#000" />
+                    <Text style={styles.liveWallpaperActionText}>
+                        {Platform.OS === 'ios' ? 'SYNC IOS WIDGET' : 'SET AS LIVE WALLPAPER'}
+                    </Text>
                 </TouchableOpacity>
             </View>
 

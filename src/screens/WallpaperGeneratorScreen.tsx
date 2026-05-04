@@ -216,6 +216,7 @@ import WeeksGrid from '../components/WeeksGrid';
 import LifeGrid from '../components/LifeGrid';
 import { getYearProgress } from '../utils/dateUtils';
 import { getConfig } from '../storage/storage';
+import { openIOSWidgetInstructions, syncWidgets } from '../widgets/widgetSync';
 
 export default function WallpaperGeneratorScreen({ route, navigation }: any) {
     const { mode, data } = route.params;
@@ -229,7 +230,16 @@ export default function WallpaperGeneratorScreen({ route, navigation }: any) {
         setProcessing(true);
         try {
             const config = await getConfig();
-            if (NativeModules.LiveWallpaperModule) {
+            if (Platform.OS === 'ios') {
+                await syncWidgets(config);
+                const openedInstructions = await openIOSWidgetInstructions();
+                if (!openedInstructions) {
+                    Alert.alert(
+                        'iPhone Widget Sync Ready',
+                        'Your Year/Goal widget data has been synced. The native iOS widget extension still needs to be connected in Xcode before this can refresh a real home-screen widget.'
+                    );
+                }
+            } else if (NativeModules.LiveWallpaperModule) {
                 const bDate = config?.birthDate || '1995-01-01';
                 const gDate = config?.goalDate || '';
                 const gTitle = config?.goalTitle || '';
@@ -309,8 +319,10 @@ export default function WallpaperGeneratorScreen({ route, navigation }: any) {
                             style={styles.liveWallpaperBtn}
                             onPress={handleSetLiveWallpaper}
                         >
-                            <Ionicons name="flash" size={24} color="#000" />
-                            <Text style={styles.liveWallpaperTitle}>SET AS LIVE WALLPAPER</Text>
+                            <Ionicons name={Platform.OS === 'ios' ? 'grid-outline' : 'flash'} size={24} color="#000" />
+                            <Text style={styles.liveWallpaperTitle}>
+                                {Platform.OS === 'ios' ? 'SYNC IOS WIDGET' : 'SET AS LIVE WALLPAPER'}
+                            </Text>
                         </TouchableOpacity>
                     )}
                 </View>

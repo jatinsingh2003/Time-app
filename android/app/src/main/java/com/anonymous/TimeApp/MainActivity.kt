@@ -1,4 +1,4 @@
-package com.anonymous.TimeApp
+package com.spritzstudio.dotchrono
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

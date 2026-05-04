@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "DotChrono",
-    "slug": "DotChrono",
+    "slug": "TimeApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
@@ -19,17 +19,9 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.TimeApp",
+      "package": "com.spritzstudio.dotchrono",
       "permissions": [
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "SET_WALLPAPER",
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.READ_MEDIA_AUDIO"
+        "SET_WALLPAPER"
       ]
     },
     "web": {
@@ -52,13 +44,6 @@
               "updatePeriodMillis": 86400000
             }
           ]
-        }
-      ],
-      [
-        "expo-media-library",
-        {
-          "photosPermission": "Allow $(PRODUCT_NAME) to access your photos.",
-          "savePhotosPermission": "Allow $(PRODUCT_NAME) to save photos."
         }
       ],
       [

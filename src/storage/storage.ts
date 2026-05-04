@@ -50,7 +50,9 @@
 // }
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export type AppMode = 'year' | 'goal';
+import { syncWidgets } from '../widgets/widgetSync';
+
+export type AppMode = 'life' | 'year' | 'goal';
 export type Theme = 'dark' | 'light';
 
 export interface AppConfig {
@@ -77,6 +79,7 @@ export const saveConfig = async (config: AppConfig) => {
     try {
         const jsonValue = JSON.stringify(config);
         await AsyncStorage.setItem(STORAGE_KEY, jsonValue);
+        await syncWidgets(config);
     } catch (e) {
         console.error('Error saving config', e);
     }
@@ -95,6 +98,7 @@ export const getConfig = async (): Promise<AppConfig> => {
 export const clearConfig = async () => {
     try {
         await AsyncStorage.removeItem(STORAGE_KEY);
+        await syncWidgets(DEFAULT_CONFIG);
     } catch (e) {
         console.error('Error clearing config', e);
     }
